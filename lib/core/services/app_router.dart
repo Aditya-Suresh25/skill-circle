@@ -41,9 +41,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       FirebaseAuth.instance.authStateChanges(),
     ),
     redirect: (context, state) {
-      // If the async provider is still loading, use the synchronous currentUser
-      // as a fallback to avoid stalling on the splash screen.
-      final isAuthLoading = authState.isLoading;
       final firebaseUser = FirebaseAuth.instance.currentUser;
       final user = authState.valueOrNull ??
           (firebaseUser == null
@@ -56,20 +53,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 ));
 
       final isLoggedIn = user != null;
-      final isAuthRoute = state.matchedLocation == AppRoutes.login ||
+      final isOnAuthRoute = state.matchedLocation == AppRoutes.login ||
           state.matchedLocation == AppRoutes.register ||
           state.matchedLocation == AppRoutes.splash;
 
-      // If loading but we could determine login state synchronously, proceed
-      if (isAuthLoading && firebaseUser == null && !isAuthRoute) {
-        return AppRoutes.login;
+      // Redirect to login if not logged in and not already on a public auth page
+      if (!isLoggedIn) {
+        if (state.matchedLocation != AppRoutes.login &&
+            state.matchedLocation != AppRoutes.register) {
+          return AppRoutes.login;
+        }
       }
 
-      if (!isLoggedIn && !isAuthRoute) {
-        return AppRoutes.login;
-      }
-
-      if (isLoggedIn && isAuthRoute) {
+      // Redirect to home if logged in and on auth page
+      if (isLoggedIn && isOnAuthRoute) {
         return AppRoutes.home;
       }
 

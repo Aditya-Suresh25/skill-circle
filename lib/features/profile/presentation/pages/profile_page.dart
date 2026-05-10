@@ -8,6 +8,7 @@ import 'package:skill_circle_app/core/constants/app_routes.dart';
 import 'package:skill_circle_app/core/services/app_router.dart';
 import 'package:skill_circle_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:skill_circle_app/features/profile/presentation/providers/profile_providers.dart';
+import 'package:skill_circle_app/models/badge_model.dart' as shared_models;
 import 'package:skill_circle_app/utils/color_theme.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
@@ -157,15 +158,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final profileAsync = authUser != null
         ? ref.watch(profileStreamProvider(authUser.id))
         : const AsyncValue.loading();
+    final badgesAsync = authUser != null
+      ? ref.watch(userBadgesProvider(authUser.id))
+      : const AsyncValue<List<shared_models.BadgeModel>>.data(<shared_models.BadgeModel>[]);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        leading: IconButton(
-          onPressed: () => context.go(AppRoutes.home),
-          icon: const Icon(Icons.arrow_back),
-        ),
-      ),
+      appBar: AppBar(title: const Text('Profile')),
       body: authUser == null
           ? const Center(child: Text('Not authenticated'))
           : profileAsync.when(
@@ -181,146 +179,195 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 }
 
                 return SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Profile Avatar
-                      Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: ClayTokens.clayShadow,
-                            ),
-                            child: CircleAvatar(
-                              radius: 48,
-                              backgroundColor: ClayTokens.brandPale,
-                              backgroundImage:
-                                  profile?.photoUrl != null && _pickedImage == null
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF114854), Color(0xFF1AA6B7)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: Colors.white,
+                                  backgroundImage: profile?.photoUrl != null && _pickedImage == null
                                       ? NetworkImage(profile!.photoUrl!)
                                       : _pickedImage != null
                                           ? FileImage(_pickedImage!)
                                           : null,
-                              child: (profile?.photoUrl == null &&
-                                      _pickedImage == null)
-                                  ? const Icon(Icons.person,
-                                      color: ClayTokens.brand, size: 32)
-                                  : null,
+                                  child: (profile?.photoUrl == null && _pickedImage == null)
+                                      ? const Icon(Icons.person, color: ClayTokens.brand, size: 30)
+                                      : null,
+                                ),
+                                Positioned(
+                                  bottom: -2,
+                                  right: -2,
+                                  child: IconButton.filled(
+                                    onPressed: _isUploadingImage ? null : _pickImage,
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: ClayTokens.brandDeep,
+                                    ),
+                                    icon: _isUploadingImage
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2),
+                                          )
+                                        : const Icon(Icons.camera_alt_rounded, size: 18),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: ClayTokens.brand,
-                                boxShadow: ClayTokens.clayShadow,
-                              ),
-                              child: IconButton(
-                                onPressed: _isUploadingImage
-                                    ? null
-                                    : _pickImage,
-                                icon: _isUploadingImage
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                  ClayTokens.surface),
-                                        ),
-                                      )
-                                    : const Icon(Icons.camera_alt,
-                                        color: ClayTokens.surface, size: 20),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    profile?.displayName ?? 'Member',
+                                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    authUser.email ?? 'N/A',
+                                    style: const TextStyle(color: Color(0xFFD8F8FC)),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Name Field
-                      TextField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Name',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(Icons.person),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Bio Field
-                      TextField(
-                        controller: _bioController,
-                        decoration: InputDecoration(
-                          labelText: 'Bio',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(Icons.description),
-                        ),
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Joined Skills
-                      if (profile?.joinedSkills.isNotEmpty ?? false) ...[
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Joined Skills (${profile!.joinedSkills.length})',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final skill in profile.joinedSkills)
-                              Chip(
-                                label: Text(skill),
-                                backgroundColor: ClayTokens.brandPale,
-                              ),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // User Info Display
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: ClayTokens.pageBg,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: ClayTokens.clayShadow,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildInfoRow('Email', authUser.email ?? 'N/A'),
-                            if (profile?.createdAt != null) ...[
-                              const SizedBox(height: 8),
-                              _buildInfoRow(
-                                'Joined',
-                                _formatDate(profile!.createdAt!),
+                      ),
+                      const SizedBox(height: 14),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            children: [
+                              TextField(
+                                controller: _nameController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Name',
+                                  prefixIcon: Icon(Icons.person),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: _bioController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Bio',
+                                  prefixIcon: Icon(Icons.description),
+                                ),
+                                maxLines: 3,
                               ),
                             ],
-                          ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 12),
+                      if (profile?.joinedSkills.isNotEmpty ?? false)
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Joined Skills (${profile!.joinedSkills.length})', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    for (final skill in profile.joinedSkills)
+                                      Chip(label: Text(skill), backgroundColor: ClayTokens.brandPale),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      badgesAsync.when(
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, __) => const SizedBox.shrink(),
+                        data: (badges) {
+                          if (badges.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
 
-                      // Action Buttons
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Badges (${badges.length})', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 10,
+                                    runSpacing: 10,
+                                    children: [
+                                      for (final badge in badges)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(16),
+                                            color: badge.isLocked ? Colors.grey.shade100 : ClayTokens.brandPale,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.workspace_premium_rounded,
+                                                size: 18,
+                                                color: badge.isLocked ? Colors.grey : ClayTokens.brandDeep,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                badge.title,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: badge.isLocked ? Colors.grey.shade600 : ClayTokens.brandDeep,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            children: [
+                              _buildInfoRow('Email', authUser.email ?? 'N/A'),
+                              if (profile?.createdAt != null) ...[
+                                const SizedBox(height: 8),
+                                _buildInfoRow('Joined', _formatDate(profile!.createdAt!)),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -328,26 +375,22 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           child: const Text('Save Profile'),
                         ),
                       ),
-                      const SizedBox(height: 12),
-
+                      const SizedBox(height: 10),
                       if (profile?.photoUrl != null)
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
                             onPressed: _deleteProfileImage,
-                            icon: const Icon(Icons.delete),
+                            icon: const Icon(Icons.delete_outline_rounded),
                             label: const Text('Delete Profile Image'),
                           ),
                         ),
-                      const SizedBox(height: 12),
-
+                      const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton(
                           onPressed: () async {
-                            await ref
-                                .read(authControllerProvider.notifier)
-                                .signOut();
+                            await ref.read(authControllerProvider.notifier).signOut();
                             if (context.mounted) {
                               context.go(AppRoutes.login);
                             }

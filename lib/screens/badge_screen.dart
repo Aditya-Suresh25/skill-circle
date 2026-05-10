@@ -1,85 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:skill_circle_app/core/services/app_router.dart';
+import 'package:skill_circle_app/features/profile/presentation/providers/profile_providers.dart';
+import 'package:skill_circle_app/models/badge_model.dart' as shared_models;
 import 'package:skill_circle_app/utils/color_theme.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Data Models
-// ─────────────────────────────────────────────────────────────────────────────
-class BadgeData {
-  final String title;
-  final IconData icon;
-  final String description;
-  final double? progress; // 0.0 to 1.0. Null means fully achieved without a progress bar.
-  final bool isLocked;
-
-  BadgeData({
-    required this.title,
-    required this.icon,
-    required this.description,
-    this.progress,
-    this.isLocked = false,
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sample Data
-// ─────────────────────────────────────────────────────────────────────────────
-final List<BadgeData> _sampleBadges = [
-  BadgeData(
-    title: 'First Post',
-    icon: Icons.edit_document,
-    description: 'Published your first post',
-    progress: 1.0,
-    isLocked: false,
-  ),
-  BadgeData(
-    title: 'Active Member',
-    icon: Icons.local_fire_department_rounded,
-    description: 'Log in for 7 consecutive days',
-    progress: 0.8,
-    isLocked: false,
-  ),
-  BadgeData(
-    title: 'Top Contributor',
-    icon: Icons.workspace_premium_rounded,
-    description: 'Reach 1,000 upvotes',
-    progress: 0.35,
-    isLocked: false,
-  ),
-  BadgeData(
-    title: 'Helpful Reviewer',
-    icon: Icons.rate_review_rounded,
-    description: 'Comment on 50 posts',
-    progress: 0.1,
-    isLocked: true,
-  ),
-  BadgeData(
-    title: 'Circle Founder',
-    icon: Icons.hub_rounded,
-    description: 'Create a new circle',
-    progress: 0.0,
-    isLocked: true,
-  ),
-  BadgeData(
-    title: 'Event Host',
-    icon: Icons.event_available_rounded,
-    description: 'Host your first live event',
-    progress: null, // Null hides the progress bar entirely
-    isLocked: true,
-  ),
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Badge Screen
-// ─────────────────────────────────────────────────────────────────────────────
-class BadgeScreen extends StatelessWidget {
+class BadgeScreen extends ConsumerWidget {
   const BadgeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authUser = ref.watch(authStateProvider).valueOrNull;
+    final badgesAsync = authUser == null
+        ? const AsyncValue<List<shared_models.BadgeModel>>.data(<shared_models.BadgeModel>[])
+        : ref.watch(userBadgesProvider(authUser.id));
+
     return Scaffold(
       backgroundColor: ClayTokens.pageBg,
-
-      // ── AppBar ──────────────────────────────────────────────────────────
       appBar: AppBar(
         backgroundColor: ClayTokens.pageBg,
         elevation: 0,
@@ -87,7 +24,7 @@ class BadgeScreen extends StatelessWidget {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: ClayTokens.textPrimary, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         title: const Text(
           'My Badges',
@@ -99,67 +36,63 @@ class BadgeScreen extends StatelessWidget {
           ),
         ),
       ),
+      body: Padding(
+        padding: const EdgeInsets.all(ClayTokens.spaceLG),
+        child: authUser == null
+            ? const Center(child: Text('Sign in to see your badges.'))
+            : badgesAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stackTrace) => Center(
+                  child: Text('Failed to load badges: $error', textAlign: TextAlign.center),
+                ),
+                data: (badges) {
+                  if (badges.isEmpty) {
+                    return const Center(child: Text('No badges yet. Start participating to unlock them.'));
+                  }
 
-      // ── Body ────────────────────────────────────────────────────────────
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Screen Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: ClayTokens.spaceLG, vertical: ClayTokens.spaceSM),
-            child: Text(
-              'Earn badges by participating in circles and helping others.',
-              style: TextStyle(
-                fontSize: ClayTokens.textSM,
-                color: ClayTokens.textSecond.withValues(alpha: 0.85),
-                height: 1.4,
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Earn badges by participating in circles and helping others.',
+                        style: TextStyle(
+                          fontSize: ClayTokens.textSM,
+                          color: ClayTokens.textSecond.withValues(alpha: 0.85),
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: ClayTokens.spaceMD),
+                      Expanded(
+                        child: GridView.builder(
+                          padding: const EdgeInsets.only(bottom: ClayTokens.spaceXL * 2),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: ClayTokens.spaceMD,
+                            mainAxisSpacing: ClayTokens.spaceMD,
+                            childAspectRatio: 0.85,
+                          ),
+                          itemCount: badges.length,
+                          itemBuilder: (context, index) => _BadgeCard(badge: badges[index]),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
-            ),
-          ),
-          
-          const SizedBox(height: ClayTokens.spaceSM),
-
-          // Badge Grid
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.fromLTRB(
-                ClayTokens.spaceLG, 
-                ClayTokens.spaceXS, 
-                ClayTokens.spaceLG, 
-                ClayTokens.spaceXL * 2
-              ),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: ClayTokens.spaceMD,
-                mainAxisSpacing: ClayTokens.spaceMD,
-                childAspectRatio: 0.85, // Adjusts height of the card
-              ),
-              itemCount: _sampleBadges.length,
-              itemBuilder: (context, index) {
-                return _BadgeCard(badge: _sampleBadges[index]);
-              },
-            ),
-          ),
-        ],
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Badge Card Component
-// ─────────────────────────────────────────────────────────────────────────────
 class _BadgeCard extends StatelessWidget {
-  final BadgeData badge;
-
   const _BadgeCard({required this.badge});
+
+  final shared_models.BadgeModel badge;
 
   @override
   Widget build(BuildContext context) {
-    // Yellow accent palette for achieved badges
-    const Color highlightColor = Color(0xFFF59E0B); // Amber/Yellow
+    const Color highlightColor = Color(0xFFF59E0B);
     const Color highlightPale = Color(0xFFFEF3C7);
-    
     final bool isAchieved = !badge.isLocked && (badge.progress == null || badge.progress! >= 1.0);
 
     return Container(
@@ -167,22 +100,20 @@ class _BadgeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: ClayTokens.surface,
         borderRadius: BorderRadius.circular(ClayTokens.radiusLG),
-        // Add a subtle glowing yellow shadow if fully achieved, otherwise standard clay
-        boxShadow: isAchieved 
+        boxShadow: isAchieved
             ? [
                 BoxShadow(
                   color: highlightColor.withValues(alpha: 0.2),
                   blurRadius: 16,
                   offset: const Offset(0, 4),
                 ),
-                ...ClayTokens.clayShadow
+                ...ClayTokens.clayShadow,
               ]
             : ClayTokens.clayShadow,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // ── Badge Icon ──
           Container(
             width: 56,
             height: 56,
@@ -192,15 +123,12 @@ class _BadgeCard extends StatelessWidget {
               boxShadow: badge.isLocked ? null : ClayTokens.clayAvatar,
             ),
             child: Icon(
-              badge.icon,
+              _iconForKey(badge.iconKey),
               size: 28,
               color: badge.isLocked ? ClayTokens.textHint : highlightColor,
             ),
           ),
-          
           const SizedBox(height: ClayTokens.spaceMD),
-          
-          // ── Title ──
           Text(
             badge.title,
             textAlign: TextAlign.center,
@@ -212,10 +140,7 @@ class _BadgeCard extends StatelessWidget {
               color: badge.isLocked ? ClayTokens.textHint : ClayTokens.textPrimary,
             ),
           ),
-          
           const SizedBox(height: 4),
-          
-          // ── Description ──
           Expanded(
             child: Text(
               badge.description,
@@ -230,12 +155,10 @@ class _BadgeCard extends StatelessWidget {
               ),
             ),
           ),
-          
-          // ── Progress Indicator (Optional) ──
           if (badge.progress != null) ...[
             const SizedBox(height: ClayTokens.spaceSM),
             _buildProgressBar(
-              progress: badge.progress!, 
+              progress: badge.progress!,
               isLocked: badge.isLocked,
               highlightColor: highlightColor,
             ),
@@ -245,10 +168,9 @@ class _BadgeCard extends StatelessWidget {
     );
   }
 
-  // Custom rounded progress bar
   Widget _buildProgressBar({
-    required double progress, 
-    required bool isLocked, 
+    required double progress,
+    required bool isLocked,
     required Color highlightColor,
   }) {
     return Container(
@@ -257,7 +179,6 @@ class _BadgeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: ClayTokens.pageBg,
         borderRadius: BorderRadius.circular(ClayTokens.radiusFull),
-        // Inset shadow effect for the empty track
         boxShadow: [
           BoxShadow(
             color: ClayTokens.brandLight.withValues(alpha: 0.2),
@@ -274,29 +195,47 @@ class _BadgeCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: isLocked ? ClayTokens.textHint : highlightColor,
             borderRadius: BorderRadius.circular(ClayTokens.radiusFull),
-            boxShadow: isLocked 
-                ? null 
+            boxShadow: isLocked
+                ? null
                 : [
                     BoxShadow(
                       color: highlightColor.withValues(alpha: 0.4),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
-                    )
+                    ),
                   ],
           ),
         ),
       ),
     );
   }
+
+  IconData _iconForKey(String key) {
+    switch (key) {
+      case 'comment':
+        return Icons.rate_review_rounded;
+      case 'circle':
+        return Icons.hub_rounded;
+      case 'group':
+        return Icons.groups_rounded;
+      case 'trophy':
+        return Icons.workspace_premium_rounded;
+      case 'profile':
+        return Icons.person_rounded;
+      case 'post':
+      default:
+        return Icons.edit_document;
+    }
+  }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Standalone Testing Entry Point
-// ─────────────────────────────────────────────────────────────────────────────
 void main() {
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(useMaterial3: true),
-    home: const BadgeScreen(),
-  ));
+  runApp(
+    const ProviderScope(
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: BadgeScreen(),
+      ),
+    ),
+  );
 }

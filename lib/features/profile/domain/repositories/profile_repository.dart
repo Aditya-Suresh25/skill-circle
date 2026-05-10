@@ -18,10 +18,10 @@ abstract class ProfileRepository {
   /// Update specific profile fields
   Future<void> updateUserProfile(String userId, Map<String, dynamic> updates);
 
-  /// Upload profile image to Firebase Storage
+  /// Upload profile image to the configured object storage
   /// Returns the download URL
   Future<String> uploadProfileImage(String userId, File imageFile);
 
-  /// Delete profile image from Firebase Storage
+  /// Delete profile image from the configured object storage
   Future<void> deleteProfileImage(String userId);
 }

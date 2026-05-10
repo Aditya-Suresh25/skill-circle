@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_circle_app/models/comment_model.dart' as shared_models;
 import 'package:skill_circle_app/features/comments/domain/entities/comment.dart';
 import 'package:skill_circle_app/features/comments/domain/repositories/comment_repository.dart';
 
@@ -19,7 +20,7 @@ class FirebaseCommentRepository implements CommentRepository {
         .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => Comment.fromMap(d.id, d.data())).toList())
+      .map((snap) => snap.docs.map((d) => _mapToEntity(shared_models.CommentModel.fromMap(d.id, d.data()))).toList())
         .handleError((e) => throw _handleError('Failed to watch comments', e));
   }
 
@@ -35,7 +36,7 @@ class FirebaseCommentRepository implements CommentRepository {
       if (startAfter != null) q = q.startAfterDocument(startAfter);
 
       final snap = await q.get();
-      final comments = snap.docs.map((d) => Comment.fromMap(d.id, d.data())).toList();
+      final comments = snap.docs.map((d) => _mapToEntity(shared_models.CommentModel.fromMap(d.id, d.data()))).toList();
       final last = snap.docs.isNotEmpty ? snap.docs.last as DocumentSnapshot<Map<String, dynamic>> : null;
       return PaginatedComments(comments: comments, lastDocument: last);
     } catch (e) {
@@ -48,7 +49,7 @@ class FirebaseCommentRepository implements CommentRepository {
     if (comment.text.trim().isEmpty) throw Exception('Comment cannot be empty');
     try {
       final ref = _firestore.collection(_commentsCollection).doc();
-      await ref.set(comment.toMap());
+      await ref.set(_mapToModel(comment).toMap());
     } catch (e) {
       throw _handleError('Failed to create comment', e);
     }
@@ -69,5 +70,26 @@ class FirebaseCommentRepository implements CommentRepository {
     }
 
     return Exception('$message: ${error.toString()}');
+  }
+
+  shared_models.CommentModel _mapToModel(Comment comment) {
+    return shared_models.CommentModel(
+      commentId: comment.id,
+      postId: comment.postId,
+      userId: comment.userId,
+      username: 'Community Member',
+      text: comment.text,
+      timestamp: comment.timestamp,
+    );
+  }
+
+  Comment _mapToEntity(shared_models.CommentModel comment) {
+    return Comment(
+      id: comment.commentId,
+      postId: comment.postId,
+      userId: comment.userId,
+      text: comment.text,
+      timestamp: comment.timestamp,
+    );
   }
 }

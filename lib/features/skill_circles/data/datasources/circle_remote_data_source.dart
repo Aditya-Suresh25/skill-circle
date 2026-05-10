@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:skill_circle_app/features/skill_circles/data/models/circle_model.dart';
+import 'package:skill_circle_app/features/skill_circles/domain/entities/skill_circle.dart';
 
 class PaginatedCircleModels {
   PaginatedCircleModels({required this.circles, this.lastDocument});
 
-  final List<CircleModel> circles;
+  final List<SkillCircle> circles;
   final DocumentSnapshot<Map<String, dynamic>>? lastDocument;
 }
 
@@ -18,7 +18,7 @@ class CircleAlreadyExistsException implements Exception {
 }
 
 abstract class CircleRemoteDataSource {
-  Stream<List<CircleModel>> watchCircles({int limit = 50});
+  Stream<List<SkillCircle>> watchCircles({int limit = 50});
 
   Future<PaginatedCircleModels> fetchCirclesPage({
     required int limit,
@@ -35,7 +35,7 @@ abstract class CircleRemoteDataSource {
 
   Future<void> leaveCircle(String circleId, String userId);
 
-  Stream<List<CircleModel>> watchJoinedCircles(String userId, {int limit = 50});
+  Stream<List<SkillCircle>> watchJoinedCircles(String userId, {int limit = 50});
 }
 
 class FirebaseCircleRemoteDataSource implements CircleRemoteDataSource {
@@ -48,14 +48,15 @@ class FirebaseCircleRemoteDataSource implements CircleRemoteDataSource {
   CollectionReference<Map<String, dynamic>> get _usersCollection => _firestore.collection('users');
 
   @override
-  Stream<List<CircleModel>> watchCircles({int limit = 50}) {
-    return _collection
-        .orderBy('created_at', descending: true)
-        .limit(limit)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => CircleModel.fromJson(doc.id, doc.data()))
-            .toList(growable: false));
+  Stream<List<SkillCircle>> watchCircles({int limit = 50}) {
+    return _collection.snapshots().map((snapshot) {
+      final circles = snapshot.docs
+          .map((doc) => SkillCircle.fromMap(doc.id, doc.data()))
+          .toList(growable: false)
+        ..sort((a, b) => b.id.compareTo(a.id));
+
+      return circles.take(limit).toList(growable: false);
+    });
   }
 
   @override
@@ -63,17 +64,26 @@ class FirebaseCircleRemoteDataSource implements CircleRemoteDataSource {
     required int limit,
     DocumentSnapshot<Map<String, dynamic>>? startAfter,
   }) async {
-    Query<Map<String, dynamic>> query = _collection.orderBy('created_at', descending: true).limit(limit);
+    final snapshot = await _collection.get();
+    final allCircles = snapshot.docs
+        .map((doc) => SkillCircle.fromMap(doc.id, doc.data()))
+        .toList(growable: false)
+      ..sort((a, b) => b.id.compareTo(a.id));
+
+    var startIndex = 0;
     if (startAfter != null) {
-      query = query.startAfterDocument(startAfter);
+      final index = snapshot.docs.indexWhere((doc) => doc.id == startAfter.id);
+      if (index >= 0) {
+        startIndex = index + 1;
+      }
     }
 
-    final snapshot = await query.get();
-    final circles = snapshot.docs
-        .map((doc) => CircleModel.fromJson(doc.id, doc.data()))
-        .toList(growable: false);
-    final last = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
-    return PaginatedCircleModels(circles: circles, lastDocument: last);
+    final pageCircles = allCircles.skip(startIndex).take(limit).toList(growable: false);
+    final lastDocument = pageCircles.isEmpty || startIndex + pageCircles.length >= allCircles.length
+        ? null
+        : snapshot.docs.firstWhere((doc) => doc.id == pageCircles.last.id);
+
+    return PaginatedCircleModels(circles: pageCircles, lastDocument: lastDocument);
   }
 
   @override
@@ -94,19 +104,33 @@ class FirebaseCircleRemoteDataSource implements CircleRemoteDataSource {
     }
 
     final circleRef = _collection.doc();
-    final circle = CircleModel(
-      circleId: circleRef.id,
-      circleName: circleName,
+    final circle = SkillCircle(
+      id: circleRef.id,
+      title: circleName,
       description: description.trim(),
-      createdBy: userId,
-      createdAt: null,
       memberCount: 1,
       members: [userId],
-      circleNameLower: normalizedName,
+      createdBy: userId,
     );
 
     final batch = _firestore.batch();
-    batch.set(circleRef, circle.toJson());
+    batch.set(circleRef, {
+      'circle_id': circle.id,
+      'circleId': circle.id,
+      'circle_name': circle.title,
+      'circleName': circle.title,
+      'title': circle.title,
+      'description': circle.description,
+      'created_by': circle.createdBy,
+      'createdBy': circle.createdBy,
+      'created_at': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'member_count': circle.memberCount,
+      'memberCount': circle.memberCount,
+      'members': circle.members,
+      'circle_name_lower': circle.title.trim().toLowerCase(),
+      'circleNameLower': circle.title.trim().toLowerCase(),
+    });
     batch.set(
       _usersCollection.doc(userId),
       {
@@ -183,13 +207,16 @@ class FirebaseCircleRemoteDataSource implements CircleRemoteDataSource {
   }
 
   @override
-  Stream<List<CircleModel>> watchJoinedCircles(String userId, {int limit = 50}) {
+  Stream<List<SkillCircle>> watchJoinedCircles(String userId, {int limit = 50}) {
     return _collection
         .where('members', arrayContains: userId)
-        .limit(limit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => CircleModel.fromJson(doc.id, doc.data()))
-            .toList(growable: false));
+        .map((snapshot) {
+          final circles = snapshot.docs
+              .map((doc) => SkillCircle.fromMap(doc.id, doc.data()))
+              .toList(growable: false)
+            ..sort((a, b) => b.id.compareTo(a.id));
+          return circles.take(limit).toList(growable: false);
+        });
   }
 }

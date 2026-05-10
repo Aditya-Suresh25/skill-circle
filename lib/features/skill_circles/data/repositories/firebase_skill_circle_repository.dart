@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:skill_circle_app/features/skill_circles/data/datasources/circle_remote_data_source.dart';
-import 'package:skill_circle_app/features/skill_circles/data/models/circle_model.dart';
 import 'package:skill_circle_app/features/skill_circles/domain/entities/skill_circle.dart';
 import 'package:skill_circle_app/features/skill_circles/domain/repositories/skill_circle_repository.dart';
 
@@ -23,8 +22,8 @@ class FirebaseSkillCircleRepository implements SkillCircleRepository {
           (circles) => circles
               .map(
                 (circle) => SkillCircle(
-                  id: circle.circleId,
-                  title: circle.circleName,
+                  id: circle.id,
+                  title: circle.title,
                   description: circle.description,
                   memberCount: circle.memberCount,
                   members: circle.members,
@@ -41,8 +40,8 @@ class FirebaseSkillCircleRepository implements SkillCircleRepository {
     final circles = page.circles
         .map(
           (circle) => SkillCircle(
-            id: circle.circleId,
-            title: circle.circleName,
+            id: circle.id,
+            title: circle.title,
             description: circle.description,
             memberCount: circle.memberCount,
             members: circle.members,
@@ -69,16 +68,7 @@ class FirebaseSkillCircleRepository implements SkillCircleRepository {
 
   @override
   Future<void> saveSkillCircle(SkillCircle circle) {
-    final model = CircleModel(
-      circleId: circle.id,
-      circleName: circle.title,
-      description: circle.description,
-      createdBy: circle.createdBy ?? '',
-      createdAt: null,
-      memberCount: circle.memberCount,
-      members: circle.members,
-    );
-    return _collection.doc(circle.id).set(model.toJson(), SetOptions(merge: true));
+    return _collection.doc(circle.id).set(circle.toMap(), SetOptions(merge: true));
   }
 
   @override
@@ -97,8 +87,8 @@ class FirebaseSkillCircleRepository implements SkillCircleRepository {
           (circles) => circles
               .map(
                 (circle) => SkillCircle(
-                  id: circle.circleId,
-                  title: circle.circleName,
+                  id: circle.id,
+                  title: circle.title,
                   description: circle.description,
                   memberCount: circle.memberCount,
                   members: circle.members,

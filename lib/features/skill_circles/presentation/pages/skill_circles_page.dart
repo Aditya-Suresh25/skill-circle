@@ -39,12 +39,9 @@ class _SkillCirclesPageState extends ConsumerState<SkillCirclesPage> {
         : state.circles.where((c) => c.title.toLowerCase().contains(_searchController.text.toLowerCase())).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Skill Circles'),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          if (!context.mounted) {
+          if (!mounted) {
             return;
           }
 
@@ -54,114 +51,120 @@ class _SkillCirclesPageState extends ConsumerState<SkillCirclesPage> {
           }
 
           final created = await context.push<bool>(AppRoutes.createCircle);
-          if (created == true && mounted) {
-            await ref.read(skillCirclesControllerProvider.notifier).refresh();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Skill circle added to your feed')),
-              );
-            }
+          if (!mounted || created != true) {
+            return;
           }
+
+          await ref.read(skillCirclesControllerProvider.notifier).refresh();
+          if (!context.mounted) {
+            return;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Skill circle added to your feed')),
+          );
         },
-        icon: const Icon(Icons.add),
+        backgroundColor: ClayTokens.brandDeep,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
         label: const Text('Create Circle'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Search
-            TextField(
-              controller: _searchController,
-              onChanged: (v) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Search circles',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Tabs: All / Joined
-            Expanded(
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => ref.read(skillCirclesControllerProvider.notifier).refresh(),
-                          child: const Text('Refresh'),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {});
-                          },
-                          child: const Text('Clear'),
-                        ),
-                      ),
-                    ],
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0E6B79), Color(0xFF19A7B8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(height: 12),
-
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Skill Circles', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white)),
+                    SizedBox(height: 6),
+                    Text('Find your people. Learn, build, and ship together.', style: TextStyle(color: Color(0xFFE3FBFF), height: 1.3)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
                   Expanded(
-                    child: state.circles.isEmpty
-                        ? Center(
-                            child: state.isLoading
-                                ? const CircularProgressIndicator()
-                                : const Text('No circles yet. Create one!'),
-                          )
-                        : ListView.builder(
-                            itemCount: filtered.length + 1,
-                            itemBuilder: (context, index) {
-                              if (index == filtered.length) {
-                                if (state.hasMore) {
-                                  // Load more button
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    child: Center(
-                                      child: ElevatedButton(
-                                        onPressed: state.isLoading
-                                            ? null
-                                            : () => ref.read(skillCirclesControllerProvider.notifier).loadMore(),
-                                        child: state.isLoading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Load more'),
-                                      ),
-                                    ),
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              }
-
-                              final circle = filtered[index];
-                              final isMember = (user != null);
-                              return GestureDetector(
-                                onTap: () {
-                                  // Navigate to circle detail
-                                  if (user == null) {
-                                    // send to login
-                                    context.go('/login');
-                                    return;
-                                  }
-                                  context.push('/skill-circles/${circle.id}');
-                                },
-                                child: _CircleCard(
-                                  circle: circle,
-                                  isMember: isMember,
-                                  onJoin: uid == null ? null : () => ref.read(skillCirclesControllerProvider.notifier).joinCircle(circle.id, uid),
-                                  onLeave: uid == null ? null : () => ref.read(skillCirclesControllerProvider.notifier).leaveCircle(circle.id, uid),
-                                ),
-                              );
-                            },
-                          ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (v) => setState(() {}),
+                      decoration: const InputDecoration(
+                        hintText: 'Search circles',
+                        prefixIcon: Icon(Icons.search_rounded),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  IconButton.filledTonal(
+                    onPressed: () => ref.read(skillCirclesControllerProvider.notifier).refresh(),
+                    icon: const Icon(Icons.refresh_rounded),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              Expanded(
+                child: state.circles.isEmpty
+                    ? Center(
+                        child: state.isLoading
+                            ? const CircularProgressIndicator()
+                            : const Text('No circles yet. Create one!'),
+                      )
+                    : ListView.builder(
+                        itemCount: filtered.length + 1,
+                        itemBuilder: (context, index) {
+                          if (index == filtered.length) {
+                            if (state.hasMore) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                child: Center(
+                                  child: OutlinedButton(
+                                    onPressed: state.isLoading
+                                        ? null
+                                        : () => ref.read(skillCirclesControllerProvider.notifier).loadMore(),
+                                    child: state.isLoading
+                                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                        : const Text('Load more circles'),
+                                  ),
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          }
+
+                          final circle = filtered[index];
+                          final isMember = user != null;
+                          return GestureDetector(
+                            onTap: () {
+                              if (user == null) {
+                                context.go('/login');
+                                return;
+                              }
+                              context.push('/skill-circles/${circle.id}');
+                            },
+                            child: _CircleCard(
+                              circle: circle,
+                              isMember: isMember,
+                              onJoin: uid == null ? null : () => ref.read(skillCirclesControllerProvider.notifier).joinCircle(circle.id, uid),
+                              onLeave: uid == null ? null : () => ref.read(skillCirclesControllerProvider.notifier).leaveCircle(circle.id, uid),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -181,14 +184,27 @@ class _CircleCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: ClayTokens.brandPale,
-              child: Text(circle.title.isNotEmpty ? circle.title[0].toUpperCase() : '?', style: const TextStyle(fontSize: 20, color: ClayTokens.brand)),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF22AFBE), Color(0xFF0F6B78)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  circle.title.isNotEmpty ? circle.title[0].toUpperCase() : '?',
+                  style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.w700),
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -199,7 +215,17 @@ class _CircleCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(circle.description, maxLines: 2, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 8),
-                  Text('${circle.memberCount} members', style: const TextStyle(fontSize: 12, color: ClayTokens.textSecond)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(99),
+                      color: ClayTokens.brandPale,
+                    ),
+                    child: Text(
+                      '${circle.memberCount} members',
+                      style: const TextStyle(fontSize: 12, color: ClayTokens.brandDeep, fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 ],
               ),
             ),

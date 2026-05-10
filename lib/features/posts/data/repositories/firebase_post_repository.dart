@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_circle_app/models/post_model.dart' as shared_models;
 import 'package:skill_circle_app/features/posts/domain/entities/post.dart';
 import 'package:skill_circle_app/features/posts/domain/repositories/post_repository.dart';
 
@@ -19,7 +20,7 @@ class FirebasePostRepository implements PostRepository {
     // to catch posts regardless of field naming. We still limit to `limit`.
     final q = _firestore.collection(_postsCollection).orderBy('timestamp', descending: true).limit(limit);
     return q.snapshots().map((snap) {
-      final all = snap.docs.map((d) => Post.fromMap(d.id, d.data())).toList();
+      final all = snap.docs.map((d) => _mapToEntity(shared_models.PostModel.fromMap(d.id, d.data()))).toList();
       final filtered = all.where((p) => p.circleId == circleId).toList(growable: false);
       return filtered;
     }).handleError((e) => throw _handleError('Failed to watch posts', e));
@@ -35,7 +36,10 @@ class FirebasePostRepository implements PostRepository {
       }
 
       final snap = await q.get();
-      final posts = snap.docs.map((d) => Post.fromMap(d.id, d.data())).where((p) => p.circleId == circleId).toList(growable: false);
+        final posts = snap.docs
+          .map((d) => _mapToEntity(shared_models.PostModel.fromMap(d.id, d.data())))
+          .where((p) => p.circleId == circleId)
+          .toList(growable: false);
       final last = snap.docs.isNotEmpty ? snap.docs.last as DocumentSnapshot<Map<String, dynamic>> : null;
 
       return PaginatedPosts(posts: posts, lastDocument: last);
@@ -52,7 +56,7 @@ class FirebasePostRepository implements PostRepository {
     while (true) {
       try {
         final ref = _firestore.collection(_postsCollection).doc();
-        await ref.set(post.toMap());
+        await ref.set(_mapToModel(post).toMap());
         return;
       } catch (e) {
         attempt++;
@@ -130,6 +134,53 @@ class FirebasePostRepository implements PostRepository {
     }
 
     return Exception('$message: ${error.toString()}');
+  }
+
+  shared_models.PostModel _mapToModel(Post post) {
+    return shared_models.PostModel(
+      postId: post.id,
+      userId: post.userId,
+      circleId: post.circleId,
+      username: 'Community Member',
+      content: post.content,
+      timestamp: post.timestamp,
+      upvotes: post.upvotes,
+      attachments: post.attachments
+          .map(
+            (attachment) => shared_models.PostAttachmentModel(
+              fileId: attachment.fileId,
+              url: attachment.url,
+              name: attachment.name,
+              size: attachment.size,
+              contentType: attachment.contentType,
+              storagePath: attachment.storagePath,
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  Post _mapToEntity(shared_models.PostModel post) {
+    return Post(
+      id: post.postId,
+      userId: post.userId,
+      circleId: post.circleId,
+      content: post.content,
+      timestamp: post.timestamp,
+      upvotes: post.upvotes,
+      attachments: post.attachments
+          .map(
+            (attachment) => Attachment(
+              fileId: attachment.fileId,
+              url: attachment.url,
+              name: attachment.name,
+              size: attachment.size,
+              contentType: attachment.contentType,
+              storagePath: attachment.storagePath,
+            ),
+          )
+          .toList(growable: false),
+    );
   }
 }
 

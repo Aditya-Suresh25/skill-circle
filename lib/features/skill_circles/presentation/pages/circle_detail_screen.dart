@@ -4,9 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skill_circle_app/core/constants/app_routes.dart';
-import 'package:skill_circle_app/features/posts/domain/entities/post.dart';
 import 'package:skill_circle_app/features/posts/presentation/pages/posts_page.dart';
-import 'package:skill_circle_app/features/posts/presentation/providers/posts_controller_provider.dart';
+import 'package:skill_circle_app/features/posts/presentation/widgets/post_composer.dart';
 import 'package:skill_circle_app/utils/color_theme.dart';
 
 class CircleDetailScreen extends ConsumerWidget {
@@ -97,86 +96,27 @@ class CircleDetailScreen extends ConsumerWidget {
             return;
           }
           if (!context.mounted) return;
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => CreatePostRoute(circleId: circleId)));
+          showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            useSafeArea: true,
+            backgroundColor: Colors.transparent,
+            builder: (sheetContext) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
+                ),
+                child: PostComposer(
+                  circleId: circleId,
+                  onSubmitted: () => Navigator.of(sheetContext).pop(),
+                ),
+              );
+            },
+          );
         },
-        child: const Icon(Icons.add_comment),
-      ),
-    );
-  }
-}
-
-// Minimal wrapper to reuse existing CreatePostScreen from screens
-class CreatePostRoute extends StatelessWidget {
-  const CreatePostRoute({super.key, required this.circleId});
-  final String circleId;
-
-  @override
-  Widget build(BuildContext context) {
-    return CreatePostScreenWrapper(circleId: circleId);
-  }
-}
-
-// Adapter around the existing CreatePostScreen to provide circleId and integrate create logic
-class CreatePostScreenWrapper extends ConsumerStatefulWidget {
-  const CreatePostScreenWrapper({super.key, required this.circleId});
-  final String circleId;
-
-  @override
-  ConsumerState<CreatePostScreenWrapper> createState() => _CreatePostScreenWrapperState();
-}
-
-class _CreatePostScreenWrapperState extends ConsumerState<CreatePostScreenWrapper> {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _contentCtrl = TextEditingController();
-  bool _submitting = false;
-
-  @override
-  void dispose() {
-    _contentCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _publish() async {
-    if (!_formKey.currentState!.validate()) return;
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please sign in to post')));
-      return;
-    }
-
-    setState(() => _submitting = true);
-    try {
-      final post = Post(id: '', userId: user.uid, circleId: widget.circleId, content: _contentCtrl.text.trim(), timestamp: DateTime.now(), upvotes: 0);
-      await ref.read(postsControllerProvider.notifier).createPost(post);
-      if (mounted) Navigator.of(context).pop(true);
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Create Post')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _contentCtrl,
-                maxLines: 8,
-                decoration: const InputDecoration(hintText: 'Write something...'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Post cannot be empty' : null,
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(onPressed: _submitting ? null : _publish, child: _submitting ? const CircularProgressIndicator() : const Text('Publish')),
-            ],
-          ),
-        ),
+        child: const Icon(Icons.add_comment_rounded),
       ),
     );
   }

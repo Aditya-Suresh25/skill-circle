@@ -9,4 +9,7 @@ abstract class StorageService {
     required String contentType,
     required String ownerId,
   });
+
+  /// Delete an uploaded file by its Appwrite file ID.
+  Future<void> deleteFile({required String fileId});
 }

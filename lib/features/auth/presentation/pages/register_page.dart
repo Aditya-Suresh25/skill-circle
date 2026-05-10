@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:skill_circle_app/core/constants/app_routes.dart';
 import 'package:skill_circle_app/core/utils/validators.dart';
 import 'package:skill_circle_app/features/auth/presentation/controllers/auth_controller.dart';
-import 'package:skill_circle_app/utils/color_theme.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -43,47 +42,81 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
               child: Form(
                 key: _formKey,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'Create account',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w700,
-                        color: ClayTokens.textPrimary,
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(28),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF9E6D), Color(0xFFFB6F58)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.rocket_launch_rounded, color: Colors.white, size: 26),
+                          SizedBox(height: 10),
+                          Text(
+                            'Create Account',
+                            style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Build your profile and start learning with the community.',
+                            style: TextStyle(color: Color(0xFFFFF0E8), height: 1.4),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text('Join the community and start building skills.'),
-                    const SizedBox(height: 32),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'Display name'),
+                    const SizedBox(height: 18),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              controller: _nameController,
+                              decoration: const InputDecoration(
+                                labelText: 'Display name',
+                                prefixIcon: Icon(Icons.person_outline_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            TextFormField(
+                              controller: _emailController,
+                              decoration: const InputDecoration(
+                                labelText: 'Email',
+                                prefixIcon: Icon(Icons.alternate_email_rounded),
+                              ),
+                              keyboardType: TextInputType.emailAddress,
+                              validator: Validators.email,
+                            ),
+                            const SizedBox(height: 14),
+                            TextFormField(
+                              controller: _passwordController,
+                              decoration: const InputDecoration(
+                                labelText: 'Password',
+                                prefixIcon: Icon(Icons.lock_outline_rounded),
+                              ),
+                              obscureText: true,
+                              validator: Validators.strongPassword,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(labelText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: Validators.email,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: const InputDecoration(labelText: 'Password'),
-                      obscureText: true,
-                      validator: Validators.strongPassword,
-                    ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
                     ElevatedButton(
                       onPressed: authState.isLoading
                           ? null
@@ -106,9 +139,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Create account'),
+                          : const Text('Create Account'),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     TextButton(
                       onPressed: () => context.go(AppRoutes.login),
                       child: const Text('Back to sign in'),

@@ -126,17 +126,17 @@ class ClayTokens {
   ClayTokens._();
 
   // Keep compile-time constants so existing `const` widgets remain valid.
-  static const Color brand = Color(0xFF7C3AED);
-  static const Color brandMid = Color(0xFF8B5CF6);
-  static const Color brandLight = Color(0xFFA78BFA);
-  static const Color brandPale = Color(0xFFEDE9FE);
-  static const Color brandDeep = Color(0xFF6D28D9);
+  static const Color brand = Color(0xFF127C8A);
+  static const Color brandMid = Color(0xFF19A7B8);
+  static const Color brandLight = Color(0xFF93DEE8);
+  static const Color brandPale = Color(0xFFE7F8FA);
+  static const Color brandDeep = Color(0xFF0A4C57);
 
-  static const Color pageBg = Color(0xFFF5F3FF);
+  static const Color pageBg = Color(0xFFF8F5EF);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color textPrimary = Color(0xFF1E1B4B);
-  static const Color textSecond = Color(0xFF6D5FA6);
-  static const Color textHint = Color(0xFFBDB4E2);
+  static const Color textPrimary = Color(0xFF18363B);
+  static const Color textSecond = Color(0xFF49656B);
+  static const Color textHint = Color(0xFF9AB2B8);
 
   static const Color error = Color(0xFFEF4444);
   static const Color success = Color(0xFF10B981);

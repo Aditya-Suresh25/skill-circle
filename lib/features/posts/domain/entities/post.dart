@@ -48,6 +48,7 @@ class Post {
 
 class Attachment {
   const Attachment({
+    required this.fileId,
     required this.url,
     required this.name,
     required this.size,
@@ -55,6 +56,7 @@ class Attachment {
     required this.storagePath,
   });
 
+  final String fileId;
   final String url;
   final String name;
   final int size;
@@ -63,6 +65,7 @@ class Attachment {
 
   factory Attachment.fromMap(Map<String, dynamic> map) {
     return Attachment(
+      fileId: map['file_id'] as String? ?? map['fileId'] as String? ?? '',
       url: map['url'] as String? ?? '',
       name: map['name'] as String? ?? '',
       size: (map['size'] as num?)?.toInt() ?? 0,
@@ -73,6 +76,7 @@ class Attachment {
 
   Map<String, dynamic> toMap() {
     return {
+      'file_id': fileId,
       'url': url,
       'name': name,
       'size': size,
