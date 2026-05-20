@@ -48,6 +48,7 @@ class ProfileController extends StateNotifier<AsyncValue<Profile?>> {
       state = AsyncValue.data(updatedProfile);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      rethrow;
     }
   }
 
@@ -69,7 +70,7 @@ class ProfileController extends StateNotifier<AsyncValue<Profile?>> {
       return downloadUrl;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return null;
+      rethrow;
     }
   }
 

@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_circle_app/core/utils/appwrite_serialization.dart';
 
 class CommentModel {
 	const CommentModel({
@@ -35,18 +35,13 @@ class CommentModel {
 			'user_id': userId,
 			'username': username,
 			'comment_text': text,
-			'timestamp': FieldValue.serverTimestamp(),
+			'timestamp': serializeAppwriteDate(timestamp),
 		};
 	}
 
 	static DateTime _parseTimestamp(dynamic value) {
-		if (value is Timestamp) return value.toDate();
-		if (value is DateTime) return value;
-		if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-		if (value is String) {
-			final parsed = DateTime.tryParse(value);
-			if (parsed != null) return parsed;
-		}
+		final parsed = parseAppwriteDate(value);
+		if (parsed != null) return parsed;
 		return DateTime.fromMillisecondsSinceEpoch(0);
 	}
 }

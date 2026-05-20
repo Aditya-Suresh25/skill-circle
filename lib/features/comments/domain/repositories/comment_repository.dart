@@ -1,11 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../entities/comment.dart';
 
 class PaginatedComments {
-  PaginatedComments({required this.comments, this.lastDocument});
+  PaginatedComments({required this.comments, this.lastCursorId});
 
   final List<Comment> comments;
-  final DocumentSnapshot<Map<String, dynamic>>? lastDocument;
+  final String? lastCursorId;
 }
 
 abstract class CommentRepository {
@@ -13,7 +12,7 @@ abstract class CommentRepository {
   Stream<List<Comment>> watchComments(String postId, {int limit = 50});
 
   /// Fetch a page of comments for pagination
-  Future<PaginatedComments> fetchCommentsPage({required String postId, required int limit, DocumentSnapshot<Map<String, dynamic>>? startAfter});
+  Future<PaginatedComments> fetchCommentsPage({required String postId, required int limit, String? startAfterId});
 
   /// Create a new comment
   Future<void> createComment(Comment comment);

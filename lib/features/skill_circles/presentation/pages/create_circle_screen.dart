@@ -1,7 +1,7 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:skill_circle_app/features/skill_circles/presentation/controllers/create_circle_controller.dart';
 import 'package:skill_circle_app/features/skill_circles/presentation/providers/skill_circles_providers.dart';
 import 'package:skill_circle_app/utils/color_theme.dart';
 
@@ -18,11 +18,38 @@ class _CreateCircleScreenState extends ConsumerState<CreateCircleScreen> {
   final _descriptionController = TextEditingController();
   bool _hasAttemptedSubmit = false;
 
+  PlatformFile? _pfpFile;
+  PlatformFile? _bannerFile;
+
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickBanner() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    if (result != null) {
+      setState(() {
+        _bannerFile = result.files.first;
+      });
+    }
+  }
+
+  Future<void> _pickAvatar() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    if (result != null) {
+      setState(() {
+        _pfpFile = result.files.first;
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -34,6 +61,8 @@ class _CreateCircleScreenState extends ConsumerState<CreateCircleScreen> {
     await ref.read(createCircleControllerProvider.notifier).createCircle(
           name: _nameController.text,
           description: _descriptionController.text,
+          pfpFile: _pfpFile,
+          bannerFile: _bannerFile,
         );
   }
 
@@ -81,7 +110,66 @@ class _CreateCircleScreenState extends ConsumerState<CreateCircleScreen> {
                     fontSize: 14,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
+                
+                // Image Pickers Section
+                Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    // Banner
+                    GestureDetector(
+                      onTap: _pickBanner,
+                      child: Container(
+                        height: 140,
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 40),
+                        decoration: BoxDecoration(
+                          color: ClayTokens.pageBg,
+                          borderRadius: BorderRadius.circular(16),
+                          image: _bannerFile?.bytes != null
+                              ? DecorationImage(
+                                  image: MemoryImage(_bannerFile!.bytes!),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: _bannerFile == null
+                            ? const Center(
+                                child: Icon(Icons.add_photo_alternate_rounded, size: 40, color: Colors.white54),
+                              )
+                            : null,
+                      ),
+                    ),
+                    
+                    // Avatar
+                    Positioned(
+                      bottom: 0,
+                      child: GestureDetector(
+                        onTap: _pickAvatar,
+                        child: Container(
+                          height: 80,
+                          width: 80,
+                          decoration: BoxDecoration(
+                            color: ClayTokens.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: ClayTokens.pageBg, width: 4),
+                            image: _pfpFile?.bytes != null
+                                ? DecorationImage(
+                                    image: MemoryImage(_pfpFile!.bytes!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                          ),
+                          child: _pfpFile == null
+                              ? Icon(Icons.camera_alt_rounded, size: 30, color: ClayTokens.brand)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+
                 TextFormField(
                   controller: _nameController,
                   textInputAction: TextInputAction.next,

@@ -1,21 +1,17 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_circle_app/app.dart';
 import 'package:skill_circle_app/core/constants/app_config.dart';
 import 'package:skill_circle_app/core/providers/app_config_provider.dart';
 import 'package:skill_circle_app/core/services/firebase_initializer.dart';
-import 'package:skill_circle_app/features/notifications/background_handler.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await FirebaseInitializer.initialize();
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
   };
-
-  // Register background message handler for FCM
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   runApp(const _BootstrapApp());
 }
@@ -44,35 +40,6 @@ class _BootstrapAppState extends State<_BootstrapApp> {
 
   Future<_BootstrapResult> _bootstrap() async {
     final config = await AppConfig.load();
-    await FirebaseInitializer.initialize();
-
-    try {
-      await FirebaseMessaging.instance
-          .setForegroundNotificationPresentationOptions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-
-      // Request notification permissions
-      await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        announcement: true,
-        badge: true,
-        provisional: false,
-        sound: true,
-      );
-
-      // Get and log FCM token
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) {
-        print('FCM Token: $token');
-        // In production, send this token to your backend for user device tracking
-      }
-    } catch (e) {
-      // Non-fatal for startup.
-      print('Notification setup error: $e');
-    }
 
     return _BootstrapResult(config);
   }

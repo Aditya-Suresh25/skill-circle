@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_circle_app/core/utils/appwrite_serialization.dart';
 
 class Comment {
   const Comment({
@@ -17,20 +17,21 @@ class Comment {
 
   factory Comment.fromMap(String id, Map<String, dynamic> data) {
     return Comment(
-      id: id,
+      id: data['id'] as String? ?? data['commentId'] as String? ?? data['comment_id'] as String? ?? id,
       postId: data['post_id'] as String? ?? '',
       userId: data['user_id'] as String? ?? '',
       text: data['comment_text'] as String? ?? '',
-      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0),
+      timestamp: parseAppwriteDate(data['timestamp']) ?? DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'commentId': id,
       'post_id': postId,
       'user_id': userId,
       'comment_text': text,
-      'timestamp': FieldValue.serverTimestamp(),
+      'timestamp': serializeAppwriteDate(timestamp),
     };
   }
 }

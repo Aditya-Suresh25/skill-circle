@@ -1,13 +1,12 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skill_circle_app/core/constants/app_routes.dart';
+import 'package:skill_circle_app/core/providers/appwrite_storage_providers.dart';
 import 'package:skill_circle_app/core/presentation/widgets/main_shell_page.dart';
-import 'package:skill_circle_app/features/auth/data/repositories/firebase_auth_repository.dart';
+import 'package:skill_circle_app/features/auth/data/repositories/appwrite_auth_repository.dart';
 import 'package:skill_circle_app/features/auth/domain/entities/app_user.dart';
 import 'package:skill_circle_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:skill_circle_app/features/auth/presentation/pages/login_page.dart';
@@ -21,9 +20,10 @@ import 'package:skill_circle_app/features/skill_circles/presentation/pages/circl
 import 'package:skill_circle_app/features/skill_circles/presentation/pages/skill_circles_page.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => FirebaseAuthRepository(
-    FirebaseAuth.instance,
-    firestore: FirebaseFirestore.instance,
+  (ref) => AppwriteAuthRepository(
+    ref.read(appwriteAccountProvider),
+    ref.read(appwriteDatabasesProvider),
+    ref.read(appwriteStorageConfigProvider),
   ),
 );
 
@@ -37,20 +37,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: kDebugMode,
-    refreshListenable: GoRouterRefreshStream(
-      FirebaseAuth.instance.authStateChanges(),
-    ),
+    refreshListenable: GoRouterRefreshStream(ref.watch(authRepositoryProvider).watchAuthState()),
     redirect: (context, state) {
-      final firebaseUser = FirebaseAuth.instance.currentUser;
-      final user = authState.valueOrNull ??
-          (firebaseUser == null
-              ? null
-              : AppUser(
-                  id: firebaseUser.uid,
-                  email: firebaseUser.email,
-                  displayName: firebaseUser.displayName,
-                  photoUrl: firebaseUser.photoURL,
-                ));
+      if (authState.isLoading) {
+        return null;
+      }
+
+      final user = authState.valueOrNull;
 
       final isLoggedIn = user != null;
       final isOnAuthRoute = state.matchedLocation == AppRoutes.login ||

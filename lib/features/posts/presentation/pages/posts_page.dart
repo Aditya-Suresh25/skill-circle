@@ -22,7 +22,9 @@ class _PostsPageState extends ConsumerState<PostsPage> {
   void initState() {
     super.initState();
     if (widget.circleId != null) {
-      Future.microtask(() => ref.read(postsControllerProvider.notifier).watchPosts(widget.circleId!));
+      Future.microtask(() {
+        ref.read(postsControllerProvider.notifier).watchPosts(widget.circleId!);
+      });
     }
   }
 
@@ -33,107 +35,126 @@ class _PostsPageState extends ConsumerState<PostsPage> {
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF133E47), Color(0xFF127C8A)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification is ScrollEndNotification &&
+                notification.metrics.extentAfter < 250 &&
+                widget.circleId != null) {
+              ref.read(postsControllerProvider.notifier).loadMore(widget.circleId!);
+            }
+            return false;
+          },
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+                sliver: SliverToBoxAdapter(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF133E47), Color(0xFF127C8A)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Circle Feed', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700)),
+                        SizedBox(height: 4),
+                        Text('Share ideas, progress updates, and requests for help.', style: TextStyle(color: Color(0xFFE2FAFF))),
+                      ],
+                    ),
                   ),
                 ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Circle Feed', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700)),
-                    SizedBox(height: 4),
-                    Text('Share ideas, progress updates, and requests for help.', style: TextStyle(color: Color(0xFFE2FAFF))),
-                  ],
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverToBoxAdapter(
+                  child: hasComposer
+                      ? PostComposer(circleId: widget.circleId, compact: true)
+                      : Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Choose a circle to post', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                                      SizedBox(height: 4),
+                                      Text('Open a circle to attach media and publish an update.', style: TextStyle(color: ClayTokens.textSecond)),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                FilledButton.tonal(
+                                  onPressed: () => context.go(AppRoutes.circles),
+                                  child: const Text('Browse'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: hasComposer
-                  ? PostComposer(circleId: widget.circleId, compact: true)
-                  : Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Choose a circle to post', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                                  SizedBox(height: 4),
-                                  Text('Open a circle to attach media and publish an update.', style: TextStyle(color: ClayTokens.textSecond)),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            FilledButton.tonal(
-                              onPressed: () => context.go(AppRoutes.circles),
-                              child: const Text('Browse'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: state.posts.isEmpty
-                  ? state.isLoading
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+              if (state.posts.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: state.isLoading
                       ? const Center(child: CircularProgressIndicator())
-                      : const Center(child: Text('No posts yet. Be the first!'))
-                  : NotificationListener<ScrollNotification>(
-                      onNotification: (n) {
-                        if (n is ScrollEndNotification && n.metrics.pixels >= n.metrics.maxScrollExtent - 50) {
-                          if (widget.circleId != null) {
-                            ref.read(postsControllerProvider.notifier).loadMore(widget.circleId!);
-                          }
-                        }
-                        return false;
+                      : const Center(child: Text('No posts yet. Be the first!')),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final post = state.posts[index];
+                        final currentUser = ref.watch(currentUserProvider);
+                        final userId = currentUser?.id;
+                        final isUpvoted = state.upvotedPostIds.contains(post.id);
+                        final isPending = state.pendingUpvoteIds.contains(post.id);
+
+                        return PostCard(
+                          post: post,
+                          isUpvoted: isUpvoted,
+                          isPending: isPending,
+                          onUpvote: userId == null
+                              ? null
+                              : () => ref.read(postsControllerProvider.notifier).toggleUpvote(post.id, userId),
+                        );
                       },
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        itemCount: state.posts.length + (state.hasMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index >= state.posts.length) {
-                            return Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Center(
-                                child: state.isLoading ? const CircularProgressIndicator() : const Text('Load more'),
-                              ),
-                            );
-                          }
-
-                          final post = state.posts[index];
-                          final currentUser = ref.watch(currentUserProvider);
-                          final userId = currentUser?.uid;
-                          final isUpvoted = state.upvotedPostIds.contains(post.id);
-                          final isPending = state.pendingUpvoteIds.contains(post.id);
-
-                          return PostCard(
-                            post: post,
-                            isUpvoted: isUpvoted,
-                            isPending: isPending,
-                            onUpvote: userId == null
-                                ? null
-                                : () => ref.read(postsControllerProvider.notifier).toggleUpvote(post.id, userId),
-                          );
-                        },
-                      ),
+                      childCount: state.posts.length,
                     ),
-            ),
-          ],
+                  ),
+                ),
+              if (state.posts.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: Center(
+                      child: state.isLoading
+                          ? const CircularProgressIndicator()
+                          : (state.hasMore
+                              ? TextButton(
+                                  onPressed: widget.circleId == null
+                                      ? null
+                                      : () => ref.read(postsControllerProvider.notifier).loadMore(widget.circleId!),
+                                  child: const Text('Load more'),
+                                )
+                              : const SizedBox.shrink()),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -150,31 +171,40 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+    final author = post.username.trim().isEmpty ? 'Community Member' : post.username.trim();
+    final initial = author.isNotEmpty ? author[0].toUpperCase() : '?';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: ClayTokens.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: ClayTokens.brandLight.withValues(alpha: 0.35)),
+        boxShadow: ClayTokens.clayShadow,
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(13),
                     gradient: const LinearGradient(
                       colors: [Color(0xFF1CB0C2), Color(0xFF0D5B65)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
+                    shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: Text(
-                      post.userId.isNotEmpty ? post.userId[0].toUpperCase() : '?',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                      initial,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
@@ -183,20 +213,28 @@ class PostCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Community Member', style: TextStyle(fontWeight: FontWeight.w700)),
-                          Text(_formatTime(post.timestamp), style: const TextStyle(fontSize: 12, color: ClayTokens.textSecond)),
-                        ],
+                      Text(
+                        author,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: ClayTokens.textPrimary),
                       ),
-                      const SizedBox(height: 8),
-                      if (post.content.isNotEmpty) Text(post.content),
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatTime(post.timestamp),
+                        style: const TextStyle(fontSize: 12, color: ClayTokens.textSecond),
+                      ),
                     ],
                   ),
                 ),
+                const Icon(Icons.more_horiz_rounded, color: ClayTokens.textHint),
               ],
             ),
+            if (post.content.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                post.content,
+                style: const TextStyle(fontSize: 15, height: 1.45, color: ClayTokens.textPrimary),
+              ),
+            ],
             if (post.attachments.isNotEmpty) ...[
               const SizedBox(height: 14),
               SizedBox(
@@ -212,24 +250,28 @@ class PostCard extends StatelessWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             Row(
               children: [
-                IconButton.filledTonal(
-                  onPressed: isPending ? null : onUpvote,
-                  icon: isUpvoted
-                      ? const Icon(Icons.thumb_up, size: 18, color: Colors.blue)
-                      : const Icon(Icons.thumb_up_alt_outlined, size: 18),
-                  tooltip: isUpvoted ? 'Remove upvote' : 'Upvote',
+                _PostActionPill(
+                  icon: isUpvoted ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
+                  label: post.upvotes.toString(),
+                  color: isUpvoted ? Colors.blue : ClayTokens.textSecond,
+                  onTap: isPending ? null : onUpvote,
                 ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(99),
-                    color: ClayTokens.brandPale,
-                  ),
-                  child: Text('${post.upvotes}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(width: 10),
+                _PostActionPill(
+                  icon: Icons.mode_comment_outlined,
+                  label: 'Comment',
+                  color: ClayTokens.textSecond,
+                  onTap: () {},
+                ),
+                const SizedBox(width: 10),
+                _PostActionPill(
+                  icon: Icons.share_rounded,
+                  label: 'Share',
+                  color: ClayTokens.textSecond,
+                  onTap: () {},
                 ),
               ],
             ),
@@ -245,6 +287,46 @@ class PostCard extends StatelessWidget {
     if (diff.inHours < 1) return '${diff.inMinutes}m';
     if (diff.inDays < 1) return '${diff.inHours}h';
     return '${diff.inDays}d';
+  }
+}
+
+class _PostActionPill extends StatelessWidget {
+  const _PostActionPill({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: ClayTokens.pageBg.withValues(alpha: 0.65),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

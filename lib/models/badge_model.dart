@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_circle_app/core/utils/appwrite_serialization.dart';
 
 class BadgeModel {
 	const BadgeModel({
@@ -47,13 +47,6 @@ class BadgeModel {
 	}
 
 	static DateTime? _parseTimestamp(dynamic value) {
-		if (value == null) return null;
-		if (value is Timestamp) return value.toDate();
-		if (value is DateTime) return value;
-		if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-		if (value is String) {
-			return DateTime.tryParse(value);
-		}
-		return null;
+		return parseAppwriteDate(value);
 	}
 }

@@ -1,12 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// Removed firebase_auth
+import 'package:skill_circle_app/core/services/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_circle_app/features/posts/domain/entities/post.dart';
 import 'package:skill_circle_app/features/posts/presentation/providers/posts_controller_provider.dart';
 import 'package:skill_circle_app/features/posts/presentation/providers/posts_providers.dart';
+import 'package:skill_circle_app/features/profile/presentation/providers/profile_providers.dart';
 import 'package:skill_circle_app/utils/color_theme.dart';
 
 class PostComposer extends ConsumerStatefulWidget {
@@ -106,7 +108,9 @@ class _PostComposerState extends ConsumerState<PostComposer> {
 
   Future<void> _submit() async {
     final content = _contentController.text.trim();
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ref.read(authStateProvider).valueOrNull;
+    final profile = user == null ? null : ref.read(profileStreamProvider(user.id)).valueOrNull;
+    final username = (profile?.displayName ?? user?.displayName ?? 'Community Member').trim();
 
     if (widget.circleId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -140,14 +144,15 @@ class _PostComposerState extends ConsumerState<PostComposer> {
           bytes: draft.bytes,
           filename: draft.name,
           contentType: draft.contentType,
-          ownerId: user.uid,
+          ownerId: user.id,
         );
         uploadedAttachments.add(uploaded);
       }
 
       final post = Post(
         id: '',
-        userId: user.uid,
+        userId: user.id,
+        username: username,
         circleId: widget.circleId!,
         content: content,
         timestamp: DateTime.now(),
@@ -156,6 +161,7 @@ class _PostComposerState extends ConsumerState<PostComposer> {
       );
 
       await ref.read(postsControllerProvider.notifier).createPost(post);
+      ref.read(postsControllerProvider.notifier).watchPosts(widget.circleId!);
 
       _contentController.clear();
       setState(() {

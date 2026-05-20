@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_circle_app/core/utils/appwrite_serialization.dart';
 
 class CircleModel {
 	const CircleModel({
@@ -40,7 +40,7 @@ class CircleModel {
 			'circle_name': circleName,
 			'description': description,
 			'created_by': createdBy,
-			'created_at': createdAt ?? FieldValue.serverTimestamp(),
+			'created_at': createdAt != null ? serializeAppwriteDate(createdAt!) : null,
 			'member_count': memberCount,
 			'members': members,
 			'circle_name_lower': circleNameLower ?? circleName.trim().toLowerCase(),
@@ -49,12 +49,6 @@ class CircleModel {
 
 	static DateTime? _parseTimestamp(dynamic value) {
 		if (value == null) return null;
-		if (value is Timestamp) return value.toDate();
-		if (value is DateTime) return value;
-		if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-		if (value is String) {
-			return DateTime.tryParse(value);
-		}
-		return null;
+		return parseAppwriteDate(value);
 	}
 }

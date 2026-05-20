@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_circle_app/core/utils/appwrite_serialization.dart';
 
 class Profile {
   const Profile({
@@ -21,32 +21,31 @@ class Profile {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  /// Convert Firestore document to Profile
-  factory Profile.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> snapshot,
-  ) {
-    final data = snapshot.data() ?? {};
+  /// Convert Appwrite document to Profile
+  factory Profile.fromMap(Map<String, dynamic> data) {
     return Profile(
-      id: snapshot.id,
-      displayName: data['displayName'] ?? '',
+      id: data['id'] ?? '',
+      displayName: data['displayName'] ?? data['name'] ?? '',
       email: data['email'] ?? '',
       bio: data['bio'],
       photoUrl: data['photoUrl'],
       joinedSkills: List<String>.from(data['joinedSkills'] ?? []),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      createdAt: parseAppwriteDate(data['createdAt']),
+      updatedAt: parseAppwriteDate(data['updatedAt']),
     );
   }
 
-  /// Convert Profile to Firestore document
-  Map<String, dynamic> toFirestore() => {
+  /// Convert Profile to Appwrite document
+  Map<String, dynamic> toMap() => {
+        'id': id,
         'displayName': displayName,
+        'name': displayName,
         'email': email,
         'bio': bio,
         'photoUrl': photoUrl,
         'joinedSkills': joinedSkills,
-        'createdAt': createdAt ?? FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': createdAt != null ? serializeAppwriteDate(createdAt!) : null,
+        'updatedAt': updatedAt != null ? serializeAppwriteDate(updatedAt!) : null,
       };
 
   /// Create a copy with updated fields

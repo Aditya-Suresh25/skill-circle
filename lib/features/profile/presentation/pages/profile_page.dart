@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:skill_circle_app/core/constants/app_routes.dart';
 import 'package:skill_circle_app/core/services/app_router.dart';
 import 'package:skill_circle_app/features/auth/presentation/controllers/auth_controller.dart';
+import 'package:skill_circle_app/features/profile/domain/entities/profile.dart';
 import 'package:skill_circle_app/features/profile/presentation/providers/profile_providers.dart';
 import 'package:skill_circle_app/models/badge_model.dart' as shared_models;
 import 'package:skill_circle_app/utils/color_theme.dart';
@@ -117,6 +118,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       await profileController.updateProfile(authUser.id, updates);
 
       if (mounted) {
+        FocusScope.of(context).unfocus();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully')),
         );
@@ -161,6 +163,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final badgesAsync = authUser != null
       ? ref.watch(userBadgesProvider(authUser.id))
       : const AsyncValue<List<shared_models.BadgeModel>>.data(<shared_models.BadgeModel>[]);
+
+    if (authUser != null) {
+      ref.listen<AsyncValue<Profile?>>(profileStreamProvider(authUser.id), (previous, next) {
+        final profile = next.valueOrNull;
+        if (profile != null) {
+          if (!FocusScope.of(context).hasFocus) {
+             _nameController.text = profile.displayName;
+             _bioController.text = profile.bio ?? '';
+          }
+        }
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:skill_circle_app/core/services/app_router.dart';
 import 'package:skill_circle_app/features/notifications/presentation/providers/notification_providers.dart';
 
 /// Widget that handles notification setup lifecycle.
@@ -15,25 +15,23 @@ class NotificationSetupWidget extends ConsumerStatefulWidget {
 }
 
 class _NotificationSetupWidgetState extends ConsumerState<NotificationSetupWidget> {
-  User? _lastUser;
 
   @override
-  void initState() {
-    super.initState();
-    _setupListener();
-  }
+  Widget build(BuildContext context) {
+    ref.listen(authStateProvider, (previous, next) {
+      final user = next.valueOrNull;
+      final prevUser = previous?.valueOrNull;
 
-  void _setupListener() {
-    FirebaseAuth.instance.authStateChanges().listen((user) {
-      if (user != null && _lastUser == null) {
+      if (user != null && prevUser == null) {
         // User logged in
-        _initializeNotifications(user.uid);
-      } else if (user == null && _lastUser != null) {
+        _initializeNotifications(user.id);
+      } else if (user == null && prevUser != null) {
         // User logged out
-        _cleanupNotifications(_lastUser!.uid);
+        _cleanupNotifications(prevUser.id);
       }
-      _lastUser = user;
     });
+
+    return widget.child;
   }
 
   Future<void> _initializeNotifications(String userId) async {
@@ -55,7 +53,4 @@ class _NotificationSetupWidgetState extends ConsumerState<NotificationSetupWidge
       print('Error cleaning up notifications: $e');
     }
   }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
 }

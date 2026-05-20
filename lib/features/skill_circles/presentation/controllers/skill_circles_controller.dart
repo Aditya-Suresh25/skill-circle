@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_circle_app/features/skill_circles/domain/entities/skill_circle.dart';
 import 'package:skill_circle_app/features/skill_circles/domain/repositories/skill_circle_repository.dart';
@@ -7,28 +5,28 @@ import 'package:skill_circle_app/features/skill_circles/domain/repositories/skil
 class SkillCirclesState {
   const SkillCirclesState({
     required this.circles,
-    this.lastDocument,
+    this.lastCursorId,
     this.isLoading = false,
     this.hasMore = true,
     this.query = '',
   });
 
   final List<SkillCircle> circles;
-  final dynamic lastDocument;
+  final String? lastCursorId;
   final bool isLoading;
   final bool hasMore;
   final String query;
 
   SkillCirclesState copyWith({
     List<SkillCircle>? circles,
-    dynamic lastDocument,
+    String? lastCursorId,
     bool? isLoading,
     bool? hasMore,
     String? query,
   }) {
     return SkillCirclesState(
       circles: circles ?? this.circles,
-      lastDocument: lastDocument ?? this.lastDocument,
+      lastCursorId: lastCursorId ?? this.lastCursorId,
       isLoading: isLoading ?? this.isLoading,
       hasMore: hasMore ?? this.hasMore,
       query: query ?? this.query,
@@ -48,9 +46,9 @@ class SkillCirclesController extends StateNotifier<SkillCirclesState> {
       final page = await _repository.fetchCirclesPage(limit: limit);
       state = state.copyWith(
         circles: page.circles,
-        lastDocument: page.lastDocument,
+        lastCursorId: page.lastCursorId,
         isLoading: false,
-        hasMore: page.lastDocument != null,
+        hasMore: page.lastCursorId != null,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false);
@@ -62,13 +60,13 @@ class SkillCirclesController extends StateNotifier<SkillCirclesState> {
     if (!state.hasMore || state.isLoading) return;
     state = state.copyWith(isLoading: true);
     try {
-      final page = await _repository.fetchCirclesPage(limit: limit, startAfter: state.lastDocument);
+      final page = await _repository.fetchCirclesPage(limit: limit, startAfterId: state.lastCursorId);
       final combined = List<SkillCircle>.from(state.circles)..addAll(page.circles);
       state = state.copyWith(
         circles: combined,
-        lastDocument: page.lastDocument,
+        lastCursorId: page.lastCursorId,
         isLoading: false,
-        hasMore: page.lastDocument != null,
+        hasMore: page.lastCursorId != null,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false);

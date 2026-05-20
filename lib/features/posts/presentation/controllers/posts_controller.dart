@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_circle_app/features/posts/domain/entities/post.dart';
 import 'package:skill_circle_app/features/posts/domain/repositories/post_repository.dart';
@@ -8,7 +7,7 @@ import 'package:skill_circle_app/features/posts/domain/repositories/post_reposit
 class PostsState {
   const PostsState({
     required this.posts,
-    this.lastDocument,
+    this.lastCursorId,
     this.isLoading = false,
     this.hasMore = true,
     this.upvotedPostIds = const {},
@@ -16,7 +15,7 @@ class PostsState {
   });
 
   final List<Post> posts;
-  final DocumentSnapshot<Map<String, dynamic>>? lastDocument;
+  final String? lastCursorId;
   final bool isLoading;
   final bool hasMore;
   final Set<String> upvotedPostIds;
@@ -24,7 +23,7 @@ class PostsState {
 
   PostsState copyWith({
     List<Post>? posts,
-    DocumentSnapshot<Map<String, dynamic>>? lastDocument,
+    String? lastCursorId,
     bool? isLoading,
     bool? hasMore,
     Set<String>? upvotedPostIds,
@@ -32,7 +31,7 @@ class PostsState {
   }) {
     return PostsState(
       posts: posts ?? this.posts,
-      lastDocument: lastDocument ?? this.lastDocument,
+      lastCursorId: lastCursorId ?? this.lastCursorId,
       isLoading: isLoading ?? this.isLoading,
       hasMore: hasMore ?? this.hasMore,
       upvotedPostIds: upvotedPostIds ?? this.upvotedPostIds,
@@ -58,8 +57,7 @@ class PostsController extends StateNotifier<PostsState> {
     _sub = _repository.watchPosts(circleId, limit: limit).listen((incoming) {
       state = state.copyWith(posts: incoming);
     }, onError: (e) {
-      // propagate error by rethrowing
-      throw e;
+      // Keep the last successful data visible when the network blips.
     });
 
     if (userId != null) {
@@ -75,17 +73,16 @@ class PostsController extends StateNotifier<PostsState> {
     if (!state.hasMore || state.isLoading) return;
     state = state.copyWith(isLoading: true);
     try {
-      final page = await _repository.fetchPostsPage(circleId: circleId, limit: limit, startAfter: state.lastDocument);
+      final page = await _repository.fetchPostsPage(circleId: circleId, limit: limit, startAfterId: state.lastCursorId);
       final combined = List<Post>.from(state.posts)..addAll(page.posts);
       state = state.copyWith(
         posts: combined,
-        lastDocument: page.lastDocument,
+        lastCursorId: page.lastCursorId,
         isLoading: false,
-        hasMore: page.lastDocument != null,
+        hasMore: page.lastCursorId != null,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false);
-      rethrow;
     }
   }
 
@@ -120,7 +117,7 @@ class PostsController extends StateNotifier<PostsState> {
     final updatedPosts = state.posts.map((p) {
       if (p.id == postId) {
         final newCount = currentlyUpvoted ? (p.upvotes - 1).clamp(0, 1 << 30) : p.upvotes + 1;
-        return Post(id: p.id, userId: p.userId, circleId: p.circleId, content: p.content, timestamp: p.timestamp, upvotes: newCount, attachments: p.attachments);
+        return Post(id: p.id, userId: p.userId, username: p.username, circleId: p.circleId, content: p.content, timestamp: p.timestamp, upvotes: newCount, attachments: p.attachments);
       }
       return p;
     }).toList(growable: false);
@@ -147,7 +144,7 @@ class PostsController extends StateNotifier<PostsState> {
       final revertedPosts = state.posts.map((p) {
         if (p.id == postId) {
           final origCount = currentlyUpvoted ? p.upvotes + 1 : (p.upvotes - 1).clamp(0, 1 << 30);
-          return Post(id: p.id, userId: p.userId, circleId: p.circleId, content: p.content, timestamp: p.timestamp, upvotes: origCount, attachments: p.attachments);
+          return Post(id: p.id, userId: p.userId, username: p.username, circleId: p.circleId, content: p.content, timestamp: p.timestamp, upvotes: origCount, attachments: p.attachments);
         }
         return p;
       }).toList(growable: false);

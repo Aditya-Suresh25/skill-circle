@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_circle_app/core/services/app_router.dart';
 import 'package:skill_circle_app/features/auth/domain/exceptions/auth_failure.dart';
+import 'package:skill_circle_app/features/profile/presentation/providers/profile_providers.dart';
+import 'package:skill_circle_app/features/skill_circles/presentation/providers/skill_circles_providers.dart';
 
 class AuthController extends StateNotifier<AsyncValue<void>> {
   AuthController(this._ref) : super(const AsyncData<void>(null));
@@ -43,6 +45,8 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
     state = const AsyncLoading<void>();
     state = await AsyncValue.guard(() async {
       await _ref.read(authRepositoryProvider).signOut();
+      _ref.invalidate(profileControllerProvider);
+      _ref.invalidate(skillCirclesControllerProvider);
     });
   }
 }

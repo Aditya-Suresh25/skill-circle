@@ -1,20 +1,17 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:appwrite/appwrite.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_circle_app/core/providers/appwrite_storage_providers.dart';
-import 'package:skill_circle_app/features/profile/data/repositories/firebase_profile_repository.dart';
+import 'package:skill_circle_app/features/profile/data/repositories/appwrite_profile_repository.dart';
 import 'package:skill_circle_app/features/profile/domain/entities/profile.dart';
 import 'package:skill_circle_app/features/profile/domain/repositories/profile_repository.dart';
 import 'package:skill_circle_app/features/profile/presentation/controllers/profile_controller.dart';
 import 'package:skill_circle_app/features/storage/data/appwrite_storage_service.dart';
 import 'package:skill_circle_app/models/badge_model.dart' as shared_models;
 
-/// Provider for Firebase instances
-final _firebaseFirestoreProvider =
-    Provider<FirebaseFirestore>((ref) => FirebaseFirestore.instance);
-
 /// Provider for ProfileRepository
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
-  final firestore = ref.watch(_firebaseFirestoreProvider);
+  final databases = ref.watch(appwriteDatabasesProvider);
+  final realtime = ref.watch(appwriteRealtimeProvider);
   final storage = ref.watch(appwriteStorageProvider);
   final config = ref.watch(appwriteStorageConfigProvider);
   final storageService = AppwriteStorageService(
@@ -23,7 +20,12 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
     endpoint: config.endpoint,
     projectId: config.projectId,
   );
-  return AppwriteProfileRepository(firestore, storageService);
+  return AppwriteProfileRepository(
+    databases,
+    realtime,
+    storageService,
+    config,
+  );
 });
 
 /// StateNotifierProvider for profile operations and state
@@ -43,25 +45,57 @@ final profileStreamProvider = StreamProvider.family<Profile?, String>((
 });
 
 final userBadgesProvider = FutureProvider.family<List<shared_models.BadgeModel>, String>((ref, userId) async {
-  final firestore = ref.watch(_firebaseFirestoreProvider);
+  final databases = ref.watch(appwriteDatabasesProvider);
+  final config = ref.watch(appwriteStorageConfigProvider);
 
-  final postsSnap = await firestore.collection('posts').where('user_id', isEqualTo: userId).get();
-  final commentsSnap = await firestore.collection('comments').where('user_id', isEqualTo: userId).get();
-  final createdCirclesSnap = await firestore.collection('SkillCircles').where('createdBy', isEqualTo: userId).get();
-  final joinedCirclesSnap = await firestore.collection('SkillCircles').where('members', arrayContains: userId).get();
-  final profileSnap = await firestore.collection('users').doc(userId).get();
+  // Fetch user posts
+  final postsResult = await databases.listDocuments(
+    databaseId: config.databaseId,
+    collectionId: config.postsCollectionId,
+    queries: [Query.equal('userId', userId)],
+  );
+  
+  // Fetch user comments
+  final commentsResult = await databases.listDocuments(
+    databaseId: config.databaseId,
+    collectionId: config.commentsCollectionId,
+    queries: [Query.equal('userId', userId)],
+  );
+  
+  // Fetch created circles
+  final createdCirclesResult = await databases.listDocuments(
+    databaseId: config.databaseId,
+    collectionId: config.skillCirclesCollectionId,
+    queries: [Query.equal('createdBy', userId)],
+  );
+  
+  // Fetch joined circles
+  final joinedCirclesResult = await databases.listDocuments(
+    databaseId: config.databaseId,
+    collectionId: config.skillCirclesCollectionId,
+    queries: [Query.contains('members', userId)],
+  );
+  
+  // Fetch user profile
+  final profileResult = await databases.getDocument(
+    databaseId: config.databaseId,
+    collectionId: config.usersCollectionId,
+    documentId: userId,
+  );
 
-  final totalPosts = postsSnap.docs.length;
-  final totalComments = commentsSnap.docs.length;
-  final totalCreatedCircles = createdCirclesSnap.docs.length;
-  final totalJoinedCircles = joinedCirclesSnap.docs.length;
-  final profileData = profileSnap.data() ?? <String, dynamic>{};
+  final totalPosts = postsResult.documents.length;
+  final totalComments = commentsResult.documents.length;
+  final totalCreatedCircles = createdCirclesResult.documents.length;
+  final totalJoinedCircles = joinedCirclesResult.documents.length;
+  final profileData = Map<String, dynamic>.from(profileResult.data as Map);
   final displayName = (profileData['displayName'] as String? ?? '').trim();
   final bio = (profileData['bio'] as String? ?? '').trim();
   final photoUrl = (profileData['photoUrl'] as String? ?? '').trim();
 
-  final totalUpvotes = postsSnap.docs.fold<int>(0, (runningTotal, doc) {
-    return runningTotal + ((doc.data()['upvotes'] as num?)?.toInt() ?? 0);
+  final totalUpvotes = postsResult.documents.fold<int>(0, (runningTotal, doc) {
+    final data = Map<String, dynamic>.from(doc.data as Map);
+    final upvotedBy = data['upvotedBy'] as List<dynamic>? ?? [];
+    return runningTotal + upvotedBy.length;
   });
 
   double ratio(int value, int target) => target <= 0 ? 1.0 : (value / target).clamp(0.0, 1.0);

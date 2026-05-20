@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+// Removed firebase_auth
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_circle_app/core/services/app_router.dart';
@@ -10,7 +10,7 @@ class SplashPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
-    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final appUser = authState.valueOrNull;
 
     return Scaffold(
       body: Center(
@@ -50,7 +50,7 @@ class SplashPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    firebaseUser == null ? 'Preparing your workspace...' : 'Welcome back, syncing your feed...',
+                    appUser == null ? 'Preparing your workspace...' : 'Welcome back, syncing your feed...',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: ClayTokens.textSecond),
                   ),

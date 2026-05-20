@@ -13,6 +13,21 @@ final appwriteClientProvider = Provider<Client>((ref) {
       .setProject(config.projectId);
 });
 
+final appwriteAccountProvider = Provider<Account>((ref) {
+  final client = ref.read(appwriteClientProvider);
+  return Account(client);
+});
+
+final appwriteDatabasesProvider = Provider<Databases>((ref) {
+  final client = ref.read(appwriteClientProvider);
+  return Databases(client);
+});
+
+final appwriteRealtimeProvider = Provider<Realtime>((ref) {
+  final client = ref.read(appwriteClientProvider);
+  return Realtime(client);
+});
+
 final appwriteStorageProvider = Provider<Storage>((ref) {
   final client = ref.read(appwriteClientProvider);
   return Storage(client);

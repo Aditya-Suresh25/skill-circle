@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_circle_app/core/utils/appwrite_serialization.dart';
 
 class UserModel {
 	const UserModel({
@@ -28,7 +28,7 @@ class UserModel {
 			email: map['email'] as String? ?? '',
 			photoUrl: map['photoUrl'] as String? ?? map['photo_url'] as String?,
 			bio: map['bio'] as String?,
-			joinedSkills: List<String>.from(map['joinedSkills'] ?? const <String>[]),
+			joinedSkills: List<String>.from(map['joinedSkills'] ?? map['joined_skills'] ?? const <String>[]),
 			createdAt: _parseTimestamp(map['createdAt'] ?? map['created_at']),
 			updatedAt: _parseTimestamp(map['updatedAt'] ?? map['updated_at']),
 		);
@@ -41,19 +41,13 @@ class UserModel {
 			'photoUrl': photoUrl,
 			'bio': bio,
 			'joinedSkills': joinedSkills,
-			'createdAt': createdAt ?? FieldValue.serverTimestamp(),
-			'updatedAt': FieldValue.serverTimestamp(),
+			'createdAt': createdAt != null ? serializeAppwriteDate(createdAt!) : null,
+			'updatedAt': serializeAppwriteDate(updatedAt ?? DateTime.now()),
 		};
 	}
 
 	static DateTime? _parseTimestamp(dynamic value) {
 		if (value == null) return null;
-		if (value is Timestamp) return value.toDate();
-		if (value is DateTime) return value;
-		if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-		if (value is String) {
-			return DateTime.tryParse(value);
-		}
-		return null;
+		return parseAppwriteDate(value);
 	}
 }

@@ -1,4 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
+// Removed firebase_auth
+import 'package:skill_circle_app/core/services/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,7 +20,6 @@ class _SkillCirclesPageState extends ConsumerState<SkillCirclesPage> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(skillCirclesControllerProvider.notifier).loadInitial());
   }
 
   @override
@@ -30,13 +30,14 @@ class _SkillCirclesPageState extends ConsumerState<SkillCirclesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(skillCirclesControllerProvider);
-    final user = FirebaseAuth.instance.currentUser;
-    final uid = user?.uid;
+    final circlesAsync = ref.watch(allCirclesStreamProvider);
+    final allCircles = circlesAsync.valueOrNull ?? [];
+    final user = ref.watch(authStateProvider).valueOrNull;
+    final uid = user?.id;
 
     final filtered = _searchController.text.isEmpty
-        ? state.circles
-        : state.circles.where((c) => c.title.toLowerCase().contains(_searchController.text.toLowerCase())).toList();
+        ? allCircles
+        : allCircles.where((c) => c.title.toLowerCase().contains(_searchController.text.toLowerCase())).toList();
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -45,7 +46,7 @@ class _SkillCirclesPageState extends ConsumerState<SkillCirclesPage> {
             return;
           }
 
-          if (FirebaseAuth.instance.currentUser == null) {
+          if (ref.read(authStateProvider).valueOrNull == null) {
             context.go(AppRoutes.login);
             return;
           }
@@ -55,10 +56,8 @@ class _SkillCirclesPageState extends ConsumerState<SkillCirclesPage> {
             return;
           }
 
-          await ref.read(skillCirclesControllerProvider.notifier).refresh();
-          if (!context.mounted) {
-            return;
-          }
+          ref.invalidate(allCirclesStreamProvider);
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Skill circle added to your feed')),
           );
@@ -107,44 +106,26 @@ class _SkillCirclesPageState extends ConsumerState<SkillCirclesPage> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  IconButton.filledTonal(
-                    onPressed: () => ref.read(skillCirclesControllerProvider.notifier).refresh(),
-                    icon: const Icon(Icons.refresh_rounded),
-                  ),
                 ],
               ),
               const SizedBox(height: 10),
               Expanded(
-                child: state.circles.isEmpty
-                    ? Center(
-                        child: state.isLoading
-                            ? const CircularProgressIndicator()
-                            : const Text('No circles yet. Create one!'),
-                      )
-                    : ListView.builder(
-                        itemCount: filtered.length + 1,
+                child: circlesAsync.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (error, _) => Center(child: Text('Error: $error')),
+                  data: (_) {
+                    if (allCircles.isEmpty) {
+                      return const Center(child: Text('No circles yet. Create one!'));
+                    }
+                    if (filtered.isEmpty) {
+                      return const Center(child: Text('No circles found matching your search.'));
+                    }
+                    return ListView.builder(
+                        itemCount: filtered.length,
                         itemBuilder: (context, index) {
-                          if (index == filtered.length) {
-                            if (state.hasMore) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                child: Center(
-                                  child: OutlinedButton(
-                                    onPressed: state.isLoading
-                                        ? null
-                                        : () => ref.read(skillCirclesControllerProvider.notifier).loadMore(),
-                                    child: state.isLoading
-                                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                                        : const Text('Load more circles'),
-                                  ),
-                                ),
-                              );
-                            }
-                            return const SizedBox.shrink();
-                          }
 
                           final circle = filtered[index];
-                          final isMember = user != null;
+                          final isMember = uid != null && circle.members.contains(uid);
                           return GestureDetector(
                             onTap: () {
                               if (user == null) {
@@ -161,7 +142,9 @@ class _SkillCirclesPageState extends ConsumerState<SkillCirclesPage> {
                             ),
                           );
                         },
-                      ),
+                      );
+                  },
+                ),
               ),
             ],
           ),
@@ -198,13 +181,21 @@ class _CircleCard extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                image: circle.imageUrl != null && circle.imageUrl.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(circle.imageUrl),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
               ),
-              child: Center(
-                child: Text(
-                  circle.title.isNotEmpty ? circle.title[0].toUpperCase() : '?',
-                  style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.w700),
-                ),
-              ),
+              child: circle.imageUrl == null || circle.imageUrl.isEmpty
+                  ? Center(
+                      child: Text(
+                        circle.title.isNotEmpty ? circle.title[0].toUpperCase() : '?',
+                        style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.w700),
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -231,11 +222,14 @@ class _CircleCard extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                if (!isMember)
-                  ElevatedButton(onPressed: onJoin, child: const Text('Join'))
-                else
-                  OutlinedButton(onPressed: onLeave, child: const Text('Leave')),
+                SizedBox(
+                  width: 84,
+                  child: isMember
+                      ? OutlinedButton(onPressed: onLeave, child: const Text('Leave'))
+                      : ElevatedButton(onPressed: onJoin, child: const Text('Join')),
+                ),
               ],
             ),
           ],

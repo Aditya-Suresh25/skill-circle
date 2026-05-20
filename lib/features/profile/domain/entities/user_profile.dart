@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_circle_app/core/utils/appwrite_serialization.dart';
 
 /// User profile entity stored in Firestore
 class UserProfile {
@@ -22,31 +22,28 @@ class UserProfile {
   final DateTime? updatedAt;
   final String? bio;
 
-  /// Convert Firestore document to UserProfile
-  factory UserProfile.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> snapshot,
-  ) {
-    final data = snapshot.data() ?? {};
+  /// Convert document data to UserProfile
+  factory UserProfile.fromMap(String id, Map<String, dynamic> data) {
     return UserProfile(
-      userId: snapshot.id,
-      name: data['name'] ?? '',
-      email: data['email'] ?? '',
-      photoUrl: data['photoUrl'],
-      joinedSkills: List<String>.from(data['joinedSkills'] ?? []),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
-      bio: data['bio'],
+      userId: data['id'] as String? ?? id,
+      name: data['name'] as String? ?? data['displayName'] as String? ?? '',
+      email: data['email'] as String? ?? '',
+      photoUrl: data['photoUrl'] as String? ?? data['photo_url'] as String?,
+      joinedSkills: List<String>.from(data['joinedSkills'] ?? data['joined_skills'] ?? const <String>[]),
+      createdAt: parseAppwriteDate(data['createdAt'] ?? data['created_at']),
+      updatedAt: parseAppwriteDate(data['updatedAt'] ?? data['updated_at']),
+      bio: data['bio'] as String?,
     );
   }
 
-  /// Convert UserProfile to Firestore document
-  Map<String, dynamic> toFirestore() => {
+  /// Convert UserProfile to document data
+  Map<String, dynamic> toMap() => {
         'name': name,
         'email': email,
         'photoUrl': photoUrl,
         'joinedSkills': joinedSkills,
-        'createdAt': createdAt ?? FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': createdAt != null ? serializeAppwriteDate(createdAt!) : null,
+        'updatedAt': serializeAppwriteDate(updatedAt ?? DateTime.now()),
         'bio': bio,
       };
 

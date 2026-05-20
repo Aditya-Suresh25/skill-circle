@@ -19,6 +19,7 @@ class AppwriteStorageService implements StorageService {
   final String _bucketId;
   final String _endpoint;
   final String _projectId;
+  late final Account _account = Account(_storage.client);
 
   static const int maxImageBytes = 10 * 1024 * 1024; // 10 MB
   static const int maxVideoBytes = 200 * 1024 * 1024; // 200 MB
@@ -53,6 +54,17 @@ class AppwriteStorageService implements StorageService {
 
     const maxAttempts = 3;
     var attempt = 0;
+
+    // Ensure anonymous session exists
+    try {
+      await _account.createAnonymousSession();
+    } on AppwriteException catch (e) {
+      // Ignore if session already exists
+      if (e.code != 401 && e.code != 403 && e.type != 'user_session_already_exists') {
+        // Just log or ignore, we will let createFile fail if auth is truly broken
+      }
+    }
+
     while (true) {
       try {
         final file = await _storage.createFile(
@@ -63,9 +75,6 @@ class AppwriteStorageService implements StorageService {
             filename: filename,
             contentType: safeContentType,
           ),
-          permissions: [
-            Permission.read(Role.any()),
-          ],
         );
 
         final fileId = file.$id;
@@ -101,6 +110,14 @@ class AppwriteStorageService implements StorageService {
 
   @override
   Future<void> deleteFile({required String fileId}) async {
+    try {
+      await _account.createAnonymousSession();
+    } on AppwriteException catch (e) {
+      if (e.code != 401 && e.code != 403 && e.type != 'user_session_already_exists') {
+        // ignore
+      }
+    }
+
     await _storage.deleteFile(
       bucketId: _bucketId,
       fileId: fileId,

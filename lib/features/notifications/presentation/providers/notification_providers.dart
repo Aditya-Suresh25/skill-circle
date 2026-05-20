@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_circle_app/core/providers/appwrite_storage_providers.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +11,7 @@ final firebaseMessagingProvider = Provider((ref) => FirebaseMessaging.instance);
 
 final localNotificationsProvider = Provider((ref) => FlutterLocalNotificationsPlugin());
 
-final firebaseFirestoreProvider = Provider((ref) => FirebaseFirestore.instance);
+// Removed firestore provider
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   final messaging = ref.read(firebaseMessagingProvider);
@@ -20,8 +20,9 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 });
 
 final deviceTokenServiceProvider = Provider((ref) {
-  final firestore = ref.read(firebaseFirestoreProvider);
-  return DeviceTokenService(firestore);
+  final databases = ref.read(appwriteDatabasesProvider);
+  final config = ref.read(appwriteStorageConfigProvider);
+  return DeviceTokenService(databases, config);
 });
 
 final notificationSetupControllerProvider = StateNotifierProvider<NotificationSetupController, AsyncValue<void>>((ref) {
