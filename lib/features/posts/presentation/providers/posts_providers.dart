@@ -26,4 +26,4 @@ final storageServiceProvider = Provider<StorageService>((ref) {
   );
 });
 
-final currentUserProvider = Provider<AppUser?>((ref) => ref.watch(authStateProvider).valueOrNull);
+final currentUserProvider = Provider<AppUser?>((ref) => ref.watch(routerAuthStateProvider).valueOrNull);

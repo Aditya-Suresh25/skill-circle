@@ -4,6 +4,7 @@ import 'package:skill_circle_app/core/constants/app_config.dart';
 import 'package:skill_circle_app/core/presentation/widgets/aurora_background.dart';
 import 'package:skill_circle_app/core/services/app_router.dart';
 import 'package:skill_circle_app/core/theme/app_theme.dart';
+import 'package:skill_circle_app/core/theme/theme_mode_provider.dart';
 import 'package:skill_circle_app/features/notifications/presentation/widgets/notification_listener.dart';
 import 'package:skill_circle_app/features/chat/presentation/providers/chat_providers.dart';
 
@@ -34,7 +35,7 @@ class _SkillCircleAppState extends ConsumerState<SkillCircleApp> {
   }
 
   void _onStateChanged(AppLifecycleState state) {
-    final user = ref.read(authStateProvider).valueOrNull;
+    final user = ref.read(routerAuthStateProvider).valueOrNull;
     if (user == null) return;
 
     final repo = ref.read(chatRepositoryProvider);
@@ -48,12 +49,15 @@ class _SkillCircleAppState extends ConsumerState<SkillCircleApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return NotificationSetupWidget(
       child: MaterialApp.router(
         debugShowCheckedModeBanner: widget.config.showDebugBanner,
         title: widget.config.appName,
         theme: SkillCircleTheme.light(),
+        darkTheme: SkillCircleTheme.dark(),
+        themeMode: themeMode,
         builder: (context, child) {
           return AuroraBackground(
             child: child ?? const SizedBox.shrink(),

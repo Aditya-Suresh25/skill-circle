@@ -17,6 +17,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -57,10 +58,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(28),
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFFF9E6D), Color(0xFFFB6F58)],
+                          colors: [Color(0xFF201335), Color(0xFFA855F7)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
+                        boxShadow: [
+                          BoxShadow(color: const Color(0xFF8B5CF6).withValues(alpha: 0.24), blurRadius: 28, spreadRadius: 2),
+                        ],
                       ),
                       child: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,13 +78,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           SizedBox(height: 6),
                           Text(
                             'Build your profile and start learning with the community.',
-                            style: TextStyle(color: Color(0xFFFFF0E8), height: 1.4),
+                            style: TextStyle(color: Color(0xFFF2E6FF), height: 1.4),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 18),
-                    Card(
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -105,11 +114,15 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             const SizedBox(height: 14),
                             TextFormField(
                               controller: _passwordController,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: 'Password',
-                                prefixIcon: Icon(Icons.lock_outline_rounded),
+                                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                suffixIcon: IconButton(
+                                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                  icon: Icon(_obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded),
+                                ),
                               ),
-                              obscureText: true,
+                              obscureText: _obscurePassword,
                               validator: Validators.strongPassword,
                             ),
                           ],

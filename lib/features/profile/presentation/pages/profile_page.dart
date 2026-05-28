@@ -1,16 +1,16 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:skill_circle_app/core/constants/app_routes.dart';
+import 'package:skill_circle_app/core/presentation/widgets/aurora_background.dart';
+import 'package:skill_circle_app/core/presentation/widgets/glass/glass.dart';
 import 'package:skill_circle_app/core/services/app_router.dart';
 import 'package:skill_circle_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:skill_circle_app/features/profile/domain/entities/profile.dart';
 import 'package:skill_circle_app/features/profile/presentation/providers/profile_providers.dart';
 import 'package:skill_circle_app/models/badge_model.dart' as shared_models;
-import 'package:skill_circle_app/utils/color_theme.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -67,7 +67,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _uploadImage() async {
     if (_pickedImage == null) return;
 
-    final authUser = ref.read(authStateProvider).valueOrNull;
+    final authUser = ref.read(routerAuthStateProvider).valueOrNull;
     if (authUser == null) return;
 
     setState(() => _isUploadingImage = true);
@@ -99,7 +99,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _saveProfile() async {
-    final authUser = ref.read(authStateProvider).valueOrNull;
+    final authUser = ref.read(routerAuthStateProvider).valueOrNull;
     if (authUser == null) return;
 
     final updates = <String, dynamic>{};
@@ -133,7 +133,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _deleteProfileImage() async {
-    final authUser = ref.read(authStateProvider).valueOrNull;
+    final authUser = ref.read(routerAuthStateProvider).valueOrNull;
     if (authUser == null) return;
 
     try {
@@ -156,7 +156,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final authUser = ref.watch(authStateProvider).valueOrNull;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDark ? Colors.white : const Color(0xFF2B1D3F);
+    final authUser = ref.watch(routerAuthStateProvider).valueOrNull;
     final profileAsync = authUser != null
         ? ref.watch(profileStreamProvider(authUser.id))
         : const AsyncValue.loading();
@@ -177,94 +179,102 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: authUser == null
-          ? const Center(child: Text('Not authenticated'))
-          : profileAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, st) => Center(
-                child: Text('Error loading profile: $error'),
-              ),
-              data: (profile) {
-                // Initialize controllers with current values
-                if (_nameController.text.isEmpty && profile != null) {
-                  _nameController.text = profile.displayName;
-                  _bioController.text = profile.bio ?? '';
-                }
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: const Text('Profile'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
+      body: AuroraBackground(
+        child: authUser == null
+            ? const Center(child: Text('Not authenticated'))
+            : profileAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, st) => Center(
+                  child: Text('Error loading profile: $error'),
+                ),
+                data: (profile) {
+                  if (_nameController.text.isEmpty && profile != null) {
+                    _nameController.text = profile.displayName;
+                    _bioController.text = profile.bio ?? '';
+                  }
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF114854), Color(0xFF1AA6B7)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Stack(
-                              children: [
-                                CircleAvatar(
-                                  radius: 40,
-                                  backgroundColor: Colors.white,
-                                  backgroundImage: profile?.photoUrl != null && _pickedImage == null
-                                      ? NetworkImage(profile!.photoUrl!)
-                                      : _pickedImage != null
-                                          ? FileImage(_pickedImage!)
-                                          : null,
-                                  child: (profile?.photoUrl == null && _pickedImage == null)
-                                      ? const Icon(Icons.person, color: ClayTokens.brand, size: 30)
-                                      : null,
-                                ),
-                                Positioned(
-                                  bottom: -2,
-                                  right: -2,
-                                  child: IconButton.filled(
-                                    onPressed: _isUploadingImage ? null : _pickImage,
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: Colors.white,
-                                      foregroundColor: ClayTokens.brandDeep,
-                                    ),
-                                    icon: _isUploadingImage
-                                        ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2),
-                                          )
-                                        : const Icon(Icons.camera_alt_rounded, size: 18),
-                                  ),
-                                ),
-                              ],
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            gradient: LinearGradient(
+                              colors: isDark
+                                  ? const [Color(0xFF3B1C5B), Color(0xFF8B5CF6)]
+                                  : const [Color(0xFF7C3AED), Color(0xFFC084FC)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                          child: Row(
+                            children: [
+                              Stack(
                                 children: [
-                                  Text(
-                                    profile?.displayName ?? 'Member',
-                                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w700),
+                                  CircleAvatar(
+                                    radius: 40,
+                                    backgroundColor: Colors.white,
+                                    backgroundImage: profile?.photoUrl != null && _pickedImage == null
+                                        ? NetworkImage(profile!.photoUrl!)
+                                        : _pickedImage != null
+                                            ? FileImage(_pickedImage!)
+                                            : null,
+                                    child: (profile?.photoUrl == null && _pickedImage == null)
+                                        ? const Icon(Icons.person, color: Color(0xFF6D28D9), size: 30)
+                                        : null,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    authUser.email ?? 'N/A',
-                                    style: const TextStyle(color: Color(0xFFD8F8FC)),
+                                  Positioned(
+                                    bottom: -2,
+                                    right: -2,
+                                    child: IconButton.filled(
+                                      onPressed: _isUploadingImage ? null : _pickImage,
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: const Color(0xFF6D28D9),
+                                      ),
+                                      icon: _isUploadingImage
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            )
+                                          : const Icon(Icons.camera_alt_rounded, size: 18),
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      profile?.displayName ?? 'Member',
+                                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w700),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      authUser.email ?? 'N/A',
+                                      style: const TextStyle(color: Color(0xFFEDE9FE)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 14),
-                      Card(
+                      GlassPanel(
                         child: Padding(
                           padding: const EdgeInsets.all(14),
                           child: Column(
@@ -291,20 +301,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                       const SizedBox(height: 12),
                       if (profile?.joinedSkills.isNotEmpty ?? false)
-                        Card(
+                        GlassPanel(
                           child: Padding(
                             padding: const EdgeInsets.all(14),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Joined Skills (${profile!.joinedSkills.length})', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                Text(
+                                  'Joined Skills (${profile!.joinedSkills.length})',
+                                  style: TextStyle(fontWeight: FontWeight.w700, color: titleColor),
+                                ),
                                 const SizedBox(height: 10),
                                 Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: [
                                     for (final skill in profile.joinedSkills)
-                                      Chip(label: Text(skill), backgroundColor: ClayTokens.brandPale),
+                                      Chip(label: Text(skill), backgroundColor: const Color(0xFFE9D5FF)),
                                   ],
                                 ),
                               ],
@@ -320,13 +333,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             return const SizedBox.shrink();
                           }
 
-                          return Card(
+                          return GlassPanel(
                             child: Padding(
                               padding: const EdgeInsets.all(14),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Badges (${badges.length})', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  Text(
+                                    'Badges (${badges.length})',
+                                    style: TextStyle(fontWeight: FontWeight.w700, color: titleColor),
+                                  ),
                                   const SizedBox(height: 10),
                                   Wrap(
                                     spacing: 10,
@@ -337,7 +353,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                           decoration: BoxDecoration(
                                             borderRadius: BorderRadius.circular(16),
-                                            color: badge.isLocked ? Colors.grey.shade100 : ClayTokens.brandPale,
+                                            color: badge.isLocked ? Colors.grey.shade100 : const Color(0xFFEDE9FE),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
@@ -345,14 +361,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                               Icon(
                                                 Icons.workspace_premium_rounded,
                                                 size: 18,
-                                                color: badge.isLocked ? Colors.grey : ClayTokens.brandDeep,
+                                                color: badge.isLocked ? Colors.grey : const Color(0xFF5B21B6),
                                               ),
                                               const SizedBox(width: 8),
                                               Text(
                                                 badge.title,
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.w600,
-                                                  color: badge.isLocked ? Colors.grey.shade600 : ClayTokens.brandDeep,
+                                                  color: badge.isLocked ? Colors.grey.shade600 : const Color(0xFF5B21B6),
                                                 ),
                                               ),
                                             ],
@@ -367,7 +383,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         },
                       ),
                       const SizedBox(height: 12),
-                      Card(
+                      GlassPanel(
                         child: Padding(
                           padding: const EdgeInsets.all(14),
                           child: Column(
@@ -412,32 +428,34 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           child: const Text('Sign Out'),
                         ),
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+      ),
     );
   }
 
   Widget _buildInfoRow(String label, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: ClayTokens.textSecond,
+            color: isDark ? const Color(0xFFD5CEE3) : const Color(0xFF65587D),
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: ClayTokens.textPrimary,
+            color: isDark ? Colors.white : const Color(0xFF2A1C3F),
           ),
         ),
       ],

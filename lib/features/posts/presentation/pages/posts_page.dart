@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skill_circle_app/core/constants/app_routes.dart';
+import 'package:skill_circle_app/core/presentation/widgets/aurora_background.dart';
+import 'package:skill_circle_app/core/presentation/widgets/glass/glass.dart';
 import 'package:skill_circle_app/features/posts/domain/entities/post.dart';
 import 'package:skill_circle_app/features/posts/presentation/providers/posts_controller_provider.dart';
 import 'package:skill_circle_app/features/posts/presentation/providers/posts_providers.dart';
@@ -32,41 +34,68 @@ class _PostsPageState extends ConsumerState<PostsPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(postsControllerProvider);
     final hasComposer = widget.circleId != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDark ? Colors.white : const Color(0xFF2A1D3E);
+    final subtitleColor = isDark ? const Color(0xFFD5CEE4) : const Color(0xFF65587E);
 
     return Scaffold(
-      body: SafeArea(
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification is ScrollEndNotification &&
-                notification.metrics.extentAfter < 250 &&
-                widget.circleId != null) {
-              ref.read(postsControllerProvider.notifier).loadMore(widget.circleId!);
-            }
-            return false;
-          },
-          child: CustomScrollView(
-            slivers: [
+      backgroundColor: Colors.transparent,
+      body: AuroraBackground(
+        child: SafeArea(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollEndNotification &&
+                  notification.metrics.extentAfter < 250 &&
+                  widget.circleId != null) {
+                ref.read(postsControllerProvider.notifier).loadMore(widget.circleId!);
+              }
+              return false;
+            },
+            child: CustomScrollView(
+              slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
                 sliver: SliverToBoxAdapter(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF133E47), Color(0xFF127C8A)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  child: GlassPanel(
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        gradient: LinearGradient(
+                          colors: isDark
+                              ? const [Color(0xFF3B1C5B), Color(0xFF8B5CF6)]
+                              : const [Color(0xFF7C3AED), Color(0xFFC084FC)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                       ),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Circle Feed', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700)),
-                        SizedBox(height: 4),
-                        Text('Share ideas, progress updates, and requests for help.', style: TextStyle(color: Color(0xFFE2FAFF))),
-                      ],
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF12101D).withValues(alpha: 0.55) : Colors.white.withValues(alpha: 0.58),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Circle Feed',
+                              style: TextStyle(
+                                color: titleColor,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Share ideas, progress updates, and requests for help.',
+                              style: TextStyle(color: subtitleColor),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -75,29 +104,36 @@ class _PostsPageState extends ConsumerState<PostsPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 sliver: SliverToBoxAdapter(
                   child: hasComposer
-                      ? PostComposer(circleId: widget.circleId, compact: true)
-                      : Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                const Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Choose a circle to post', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                                      SizedBox(height: 4),
-                                      Text('Open a circle to attach media and publish an update.', style: TextStyle(color: ClayTokens.textSecond)),
-                                    ],
-                                  ),
+                      ? GlassPanel(child: PostComposer(circleId: widget.circleId, compact: true))
+                      : GlassPanel(
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Choose a circle to post',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                        color: titleColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Open a circle to attach media and publish an update.',
+                                      style: TextStyle(color: subtitleColor),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 12),
-                                FilledButton.tonal(
-                                  onPressed: () => context.go(AppRoutes.circles),
-                                  child: const Text('Browse'),
-                                ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 12),
+                              FilledButton.tonal(
+                                onPressed: () => context.go(AppRoutes.circles),
+                                child: const Text('Browse'),
+                              ),
+                            ],
                           ),
                         ),
                 ),
@@ -108,7 +144,12 @@ class _PostsPageState extends ConsumerState<PostsPage> {
                   hasScrollBody: false,
                   child: state.isLoading
                       ? const Center(child: CircularProgressIndicator())
-                      : const Center(child: Text('No posts yet. Be the first!')),
+                      : Center(
+                          child: Text(
+                            'No posts yet. Be the first!',
+                            style: TextStyle(color: subtitleColor, fontWeight: FontWeight.w600),
+                          ),
+                        ),
                 )
               else
                 SliverPadding(
@@ -154,12 +195,14 @@ class _PostsPageState extends ConsumerState<PostsPage> {
                   ),
                 ),
             ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+
 
 class PostCard extends StatelessWidget {
   const PostCard({super.key, required this.post, this.isUpvoted = false, this.isPending = false, this.onUpvote});

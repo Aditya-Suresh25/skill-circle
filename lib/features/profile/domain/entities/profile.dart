@@ -5,6 +5,7 @@ class Profile {
     required this.id,
     required this.displayName,
     required this.email,
+    this.role = 'student',
     this.bio,
     this.photoUrl,
     this.joinedSkills = const [],
@@ -15,6 +16,7 @@ class Profile {
   final String id;
   final String displayName;
   final String email;
+  final String role;
   final String? bio;
   final String? photoUrl;
   final List<String> joinedSkills;
@@ -27,6 +29,7 @@ class Profile {
       id: data['id'] ?? '',
       displayName: data['displayName'] ?? data['name'] ?? '',
       email: data['email'] ?? '',
+      role: data['role'] ?? 'student',
       bio: data['bio'],
       photoUrl: data['photoUrl'],
       joinedSkills: List<String>.from(data['joinedSkills'] ?? []),
@@ -41,6 +44,7 @@ class Profile {
         'displayName': displayName,
         'name': displayName,
         'email': email,
+        'role': role,
         'bio': bio,
         'photoUrl': photoUrl,
         'joinedSkills': joinedSkills,
@@ -53,6 +57,7 @@ class Profile {
     String? id,
     String? displayName,
     String? email,
+    String? role,
     String? bio,
     String? photoUrl,
     List<String>? joinedSkills,
@@ -63,6 +68,7 @@ class Profile {
       id: id ?? this.id,
       displayName: displayName ?? this.displayName,
       email: email ?? this.email,
+      role: role ?? this.role,
       bio: bio ?? this.bio,
       photoUrl: photoUrl ?? this.photoUrl,
       joinedSkills: joinedSkills ?? this.joinedSkills,

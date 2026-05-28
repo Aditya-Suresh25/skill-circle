@@ -1,6 +1,7 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_circle_app/core/providers/appwrite_storage_providers.dart';
+import 'package:skill_circle_app/features/auth/presentation/providers/auth_providers.dart';
 import 'package:skill_circle_app/features/profile/data/repositories/appwrite_profile_repository.dart';
 import 'package:skill_circle_app/features/profile/domain/entities/profile.dart';
 import 'package:skill_circle_app/features/profile/domain/repositories/profile_repository.dart';
@@ -42,6 +43,20 @@ final profileStreamProvider = StreamProvider.family<Profile?, String>((
 ) {
   final repository = ref.watch(profileRepositoryProvider);
   return repository.watchProfile(userId);
+});
+
+final currentProfileProvider = FutureProvider<Profile?>((ref) async {
+  final authUser = ref.watch(authStateProvider).valueOrNull;
+  if (authUser == null) {
+    return null;
+  }
+
+  final repository = ref.watch(profileRepositoryProvider);
+  try {
+    return await repository.getUserProfile(authUser.id);
+  } catch (_) {
+    return null;
+  }
 });
 
 final userBadgesProvider = FutureProvider.family<List<shared_models.BadgeModel>, String>((ref, userId) async {

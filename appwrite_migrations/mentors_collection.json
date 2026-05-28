@@ -1,0 +1,15 @@
+{
+  "collectionId": "mentors",
+  "name": "mentors",
+  "attributes": [
+    { "key": "user_id", "type": "string", "required": true },
+    { "key": "display_name", "type": "string", "required": true },
+    { "key": "bio", "type": "string", "required": false },
+    { "key": "skills", "type": "array", "items": { "type": "string" } },
+    { "key": "is_active", "type": "boolean", "required": false },
+    { "key": "created_at", "type": "datetime", "required": false }
+  ],
+  "indexes": [
+    { "key": "user_id_index", "type": "key", "attributes": ["user_id"] }
+  ]
+}

@@ -11,4 +11,7 @@ class AppRoutes {
   static const posts = '/posts';
   static const comments = '/comments';
   static const profile = '/profile';
+  static const mentorSignup = '/mentor/signup';
+  static const mentorDashboard = '/mentor/dashboard';
+  static const adminDashboard = '/admin/dashboard';
 }

@@ -18,7 +18,7 @@ class _NotificationSetupWidgetState extends ConsumerState<NotificationSetupWidge
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(authStateProvider, (previous, next) {
+    ref.listen(routerAuthStateProvider, (previous, next) {
       final user = next.valueOrNull;
       final prevUser = previous?.valueOrNull;
 

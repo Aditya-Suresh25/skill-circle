@@ -108,7 +108,7 @@ class _PostComposerState extends ConsumerState<PostComposer> {
 
   Future<void> _submit() async {
     final content = _contentController.text.trim();
-    final user = ref.read(authStateProvider).valueOrNull;
+    final user = ref.read(routerAuthStateProvider).valueOrNull;
     final profile = user == null ? null : ref.read(profileStreamProvider(user.id)).valueOrNull;
     final username = (profile?.displayName ?? user?.displayName ?? 'Community Member').trim();
 

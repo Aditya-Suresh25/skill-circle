@@ -8,6 +8,7 @@ class AppConfig {
     required this.showDebugBanner,
     required this.enableLogging,
     required this.enableGoogleSignIn,
+    required this.geminiApiKey,
   });
 
   final AppEnvironment environment;
@@ -15,6 +16,7 @@ class AppConfig {
   final bool showDebugBanner;
   final bool enableLogging;
   final bool enableGoogleSignIn;
+  final String geminiApiKey;
 
   static Future<AppConfig> load() async {
     final environment = AppEnvironment.fromName(
@@ -29,6 +31,7 @@ class AppConfig {
       showDebugBanner: _readBool('APP_SHOW_DEBUG_BANNER', fallback: false),
       enableLogging: _readBool('APP_ENABLE_LOGGING', fallback: true),
       enableGoogleSignIn: _readBool('APP_ENABLE_GOOGLE_SIGN_IN', fallback: false),
+      geminiApiKey: _readString('GEMINI_API_KEY', fallback: ''),
     );
   }
 

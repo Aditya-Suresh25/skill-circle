@@ -1,5 +1,6 @@
-import 'dart:async';
+﻿import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,9 +16,14 @@ import 'package:skill_circle_app/features/auth/presentation/pages/splash_page.da
 import 'package:skill_circle_app/features/comments/presentation/pages/comments_page.dart';
 import 'package:skill_circle_app/features/posts/presentation/pages/posts_page.dart';
 import 'package:skill_circle_app/features/profile/presentation/pages/profile_page.dart';
+import 'package:skill_circle_app/features/profile/presentation/providers/profile_providers.dart';
 import 'package:skill_circle_app/features/skill_circles/presentation/pages/create_circle_screen.dart';
 import 'package:skill_circle_app/features/skill_circles/presentation/pages/circle_detail_screen.dart';
 import 'package:skill_circle_app/features/skill_circles/presentation/pages/skill_circles_page.dart';
+import 'package:skill_circle_app/features/mentor/presentation/pages/mentor_dashboard_page.dart';
+import 'package:skill_circle_app/features/mentor/presentation/pages/mentor_signup_page.dart';
+import 'package:skill_circle_app/features/mentor/presentation/providers/mentor_providers.dart';
+import 'package:skill_circle_app/features/admin/presentation/pages/admin_dashboard_page.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => AppwriteAuthRepository(
@@ -27,12 +33,14 @@ final authRepositoryProvider = Provider<AuthRepository>(
   ),
 );
 
-final authStateProvider = StreamProvider<AppUser?>(
+final routerAuthStateProvider = StreamProvider<AppUser?>(
   (ref) => ref.watch(authRepositoryProvider).watchAuthState(),
 );
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  final authState = ref.watch(routerAuthStateProvider);
+  final mentorProfile = ref.watch(currentMentorProfileProvider);
+  final currentProfile = ref.watch(currentProfileProvider);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
@@ -63,54 +71,85 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return AppRoutes.home;
       }
 
+      // Mentor route guard: if user navigates to mentor dashboard but has no mentor profile, send to signup
+      if (state.matchedLocation == AppRoutes.mentorDashboard) {
+        final hasMentor = mentorProfile is AsyncData && mentorProfile.value != null;
+        if (!hasMentor) return AppRoutes.mentorSignup;
+      }
+
+      if (state.matchedLocation == AppRoutes.adminDashboard) {
+        if (currentProfile.isLoading) {
+          return null;
+        }
+        final profile = currentProfile.valueOrNull;
+        if (profile == null) {
+          return isLoggedIn ? AppRoutes.home : AppRoutes.login;
+        }
+        if (profile.role.toLowerCase() != 'admin') {
+          return AppRoutes.home;
+        }
+      }
+
       return null;
     },
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        builder: (context, state) => const SplashPage(),
+        pageBuilder: (context, state) => _transitionPage(state, const SplashPage()),
       ),
       GoRoute(
         path: AppRoutes.login,
-        builder: (context, state) => const LoginPage(),
+        pageBuilder: (context, state) => _transitionPage(state, const LoginPage()),
       ),
       GoRoute(
         path: AppRoutes.register,
-        builder: (context, state) => const RegisterPage(),
+        pageBuilder: (context, state) => _transitionPage(state, const RegisterPage()),
       ),
       GoRoute(
         path: AppRoutes.createCircle,
-        builder: (context, state) => const CreateCircleScreen(),
+        pageBuilder: (context, state) => _transitionPage(state, const CreateCircleScreen()),
       ),
       ShellRoute(
         builder: (context, state, child) => MainShellPage(child: child),
         routes: [
           GoRoute(
             path: AppRoutes.home,
-            builder: (context, state) => const SkillCirclesPage(),
+            pageBuilder: (context, state) => _transitionPage(state, const SkillCirclesPage()),
           ),
           GoRoute(
             path: '/skill-circles/:id',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final id = state.pathParameters['id']!;
-              return CircleDetailScreen(circleId: id);
+              return _transitionPage(state, CircleDetailScreen(circleId: id));
             },
           ),
           GoRoute(
             path: AppRoutes.circles,
-            builder: (context, state) => const SkillCirclesPage(),
+            pageBuilder: (context, state) => _transitionPage(state, const SkillCirclesPage()),
           ),
           GoRoute(
             path: AppRoutes.posts,
-            builder: (context, state) => const PostsPage(),
+            pageBuilder: (context, state) => _transitionPage(state, const PostsPage()),
           ),
           GoRoute(
             path: AppRoutes.comments,
-            builder: (context, state) => const CommentsPage(),
+            pageBuilder: (context, state) => _transitionPage(state, const CommentsPage()),
           ),
           GoRoute(
             path: AppRoutes.profile,
-            builder: (context, state) => const ProfilePage(),
+            pageBuilder: (context, state) => _transitionPage(state, const ProfilePage()),
+          ),
+          GoRoute(
+            path: AppRoutes.mentorSignup,
+            pageBuilder: (context, state) => _transitionPage(state, const MentorSignupPage()),
+          ),
+          GoRoute(
+            path: AppRoutes.mentorDashboard,
+            pageBuilder: (context, state) => _transitionPage(state, const MentorDashboardPage()),
+          ),
+          GoRoute(
+            path: AppRoutes.adminDashboard,
+            pageBuilder: (context, state) => _transitionPage(state, const AdminDashboardPage()),
           ),
         ],
       ),
@@ -132,4 +171,19 @@ class GoRouterRefreshStream extends ChangeNotifier {
     _subscription.cancel();
     super.dispose();
   }
+}
+
+CustomTransitionPage<void> _transitionPage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, pageChild) {
+      final fade = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      final slide = Tween<Offset>(begin: const Offset(0.02, 0.03), end: Offset.zero).animate(fade);
+      return FadeTransition(
+        opacity: fade,
+        child: SlideTransition(position: slide, child: pageChild),
+      );
+    },
+  );
 }

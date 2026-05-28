@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:skill_circle_app/core/constants/app_routes.dart';
+import 'package:skill_circle_app/core/presentation/widgets/aurora_background.dart';
+import 'package:skill_circle_app/core/presentation/widgets/glass/glass.dart';
+import 'package:skill_circle_app/features/ai/presentation/widgets/community_icebreaker_panel.dart';
 import 'package:skill_circle_app/features/posts/presentation/providers/posts_providers.dart';
-import 'package:skill_circle_app/features/skill_circles/presentation/controllers/skill_circles_controller.dart';
 import 'package:skill_circle_app/features/skill_circles/presentation/providers/skill_circles_providers.dart';
 import 'package:skill_circle_app/utils/color_theme.dart';
 import 'package:skill_circle_app/features/auth/domain/entities/app_user.dart';
@@ -13,6 +15,7 @@ import 'package:skill_circle_app/features/posts/presentation/widgets/post_compos
 import 'package:skill_circle_app/features/chat/presentation/providers/chat_providers.dart';
 import 'package:skill_circle_app/features/chat/presentation/pages/chat_screen.dart';
 import 'package:skill_circle_app/features/profile/presentation/providers/profile_providers.dart';
+
 class CircleDetailScreen extends ConsumerWidget {
   const CircleDetailScreen({super.key, required this.circleId});
 
@@ -28,12 +31,18 @@ class CircleDetailScreen extends ConsumerWidget {
     }
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Circle'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
-      body: skillCirclesState.circles.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : _buildCircleView(context, ref, currentUser, skillCirclesState.circles),
+      body: AuroraBackground(
+        child: skillCirclesState.circles.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : _buildCircleView(context, ref, currentUser, skillCirclesState.circles),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showPostComposer(context, currentUser),
         child: const Icon(Icons.add_comment_rounded),
@@ -51,91 +60,125 @@ class CircleDetailScreen extends ConsumerWidget {
     final circle = matches.first;
     final memberCount = circle.members.length;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final titleColor = isDark ? Colors.white : const Color(0xFF2A1D3D);
+    final subtitleColor = isDark ? const Color(0xFFD6CFE5) : const Color(0xFF66587D);
+
     return DefaultTabController(
       length: 2,
-      child: Column(
-        children: [
+      child: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
           if (circle.bannerUrl != null && circle.bannerUrl!.isNotEmpty)
-            Image.network(
-              circle.bannerUrl!,
-              width: double.infinity,
-              height: 120,
-              fit: BoxFit.cover,
+            SliverToBoxAdapter(
+              child: Image.network(
+                circle.bannerUrl!,
+                width: double.infinity,
+                height: 120,
+                fit: BoxFit.cover,
+              ),
             ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            color: ClayTokens.pageBg,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              child: GlassPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: ClayTokens.brandPale,
-                      backgroundImage: circle.imageUrl != null && circle.imageUrl!.isNotEmpty
-                          ? NetworkImage(circle.imageUrl!)
-                          : null,
-                      child: circle.imageUrl == null || circle.imageUrl!.isEmpty
-                          ? Text(circle.title.isNotEmpty ? circle.title[0].toUpperCase() : '?', style: const TextStyle(fontSize: 20, color: ClayTokens.brand))
-                          : null,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(circle.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                          const SizedBox(height: 6),
-                          Text(circle.description, maxLines: 2, overflow: TextOverflow.ellipsis),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
+                    Row(
                       children: [
-                        Text('$memberCount', style: const TextStyle(fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
-                        SizedBox(
-                          width: 84,
-                          child: OutlinedButton(
-                            onPressed: () {},
-                            child: const Text('Join'),
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: const Color(0xFFE9D5FF),
+                          backgroundImage: circle.imageUrl != null && circle.imageUrl!.isNotEmpty
+                              ? NetworkImage(circle.imageUrl!)
+                              : null,
+                          child: circle.imageUrl == null || circle.imageUrl!.isEmpty
+                              ? Text(
+                                  circle.title.isNotEmpty ? circle.title[0].toUpperCase() : '?',
+                                  style: const TextStyle(fontSize: 20, color: Color(0xFF6D28D9)),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                circle.title,
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: titleColor),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                circle.description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: subtitleColor),
+                              ),
+                            ],
                           ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          children: [
+                            Text('$memberCount', style: TextStyle(fontWeight: FontWeight.w700, color: titleColor)),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              width: 84,
+                              child: OutlinedButton(
+                                onPressed: () {},
+                                child: const Text('Join'),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    Text('Members', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: titleColor)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 40,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: circle.members.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          return _MemberAvatar(userId: circle.members[index]);
+                        },
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                const Text('Members', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 40,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: circle.members.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      return _MemberAvatar(userId: circle.members[index]);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const TabBar(tabs: [Tab(text: 'Channels'), Tab(text: 'Posts')]),
-              ],
+              ),
             ),
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _ChannelsTab(circleId: circleId),
-                PostsPage(circleId: circleId),
-              ],
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: CommunityIcebreakerPanel(communityTopic: circle.title),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: GlassPanel(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: TabBar(
+                  labelColor: titleColor,
+                  unselectedLabelColor: subtitleColor,
+                  tabs: const [Tab(text: 'Channels'), Tab(text: 'Posts')],
+                ),
+              ),
             ),
           ),
         ],
+        body: TabBarView(
+          children: [
+            _ChannelsTab(circleId: circleId),
+            PostsPage(circleId: circleId),
+          ],
+        ),
       ),
     );
   }
@@ -198,18 +241,24 @@ class _ChannelsTab extends ConsumerWidget {
         }
 
         return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           itemCount: channels.length,
           itemBuilder: (context, index) {
             final channel = channels[index];
-            return ListTile(
-              leading: const Icon(Icons.tag_rounded),
-              title: Text(channel.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(channel.description),
-              onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => ChatScreen(circleId: circleId, channel: channel),
-                ));
-              },
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: GlassPanel(
+                child: ListTile(
+                  leading: const Icon(Icons.tag_rounded),
+                  title: Text(channel.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text(channel.description),
+                  onTap: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) => ChatScreen(circleId: circleId, channel: channel),
+                    ));
+                  },
+                ),
+              ),
             );
           },
         );
@@ -301,3 +350,4 @@ class _MemberAvatar extends ConsumerWidget {
     );
   }
 }
+

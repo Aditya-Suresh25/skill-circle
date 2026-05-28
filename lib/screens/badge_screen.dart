@@ -10,7 +10,7 @@ class BadgeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authUser = ref.watch(authStateProvider).valueOrNull;
+    final authUser = ref.watch(routerAuthStateProvider).valueOrNull;
     final badgesAsync = authUser == null
         ? const AsyncValue<List<shared_models.BadgeModel>>.data(<shared_models.BadgeModel>[])
         : ref.watch(userBadgesProvider(authUser.id));

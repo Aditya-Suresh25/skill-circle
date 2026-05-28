@@ -50,7 +50,7 @@ class AppwriteAuthRepository implements AuthRepository {
       }
 
       _emitAuthState(user);
-      await _upsertUserProfile(user);
+      await _safeUpsertUserProfile(user);
       return user;
     });
   }
@@ -80,7 +80,7 @@ class AppwriteAuthRepository implements AuthRepository {
       }
 
       _emitAuthState(user);
-      await _upsertUserProfile(user, displayName: displayName);
+      await _safeUpsertUserProfile(user, displayName: displayName);
       return user;
     });
   }
@@ -112,12 +112,23 @@ class AppwriteAuthRepository implements AuthRepository {
       final appUser = _mapUser(user);
       _cachedUser = appUser;
       if (appUser != null) {
-        await _upsertUserProfile(appUser);
+        await _safeUpsertUserProfile(appUser);
       }
       return appUser;
     } on AppwriteException {
       _cachedUser = null;
       return null;
+    }
+  }
+
+  Future<void> _safeUpsertUserProfile(
+    AppUser user, {
+    String? displayName,
+  }) async {
+    try {
+      await _upsertUserProfile(user, displayName: displayName);
+    } catch (_) {
+      // Auth should still succeed even if profile sync fails.
     }
   }
 
@@ -130,6 +141,7 @@ class AppwriteAuthRepository implements AuthRepository {
     final profile = <String, dynamic>{
       'displayName': display,
       'email': user.email ?? '',
+      'role': 'student',
       'bio': '',
       'joinedSkills': const <String>[],
       'createdAt': now,
@@ -154,12 +166,46 @@ class AppwriteAuthRepository implements AuthRepository {
       );
     } on AppwriteException catch (error) {
       if (error.code == 409) {
+        final existing = await _databases.getDocument(
+          databaseId: _config.databaseId,
+          collectionId: _config.usersCollectionId,
+          documentId: user.id,
+        );
+        final existingData = Map<String, dynamic>.from(existing.data as Map);
+        profile['role'] = existingData['role'] ?? profile['role'];
         await _databases.updateDocument(
           databaseId: _config.databaseId,
           collectionId: _config.usersCollectionId,
           documentId: user.id,
           data: profile,
         );
+      } else if (error.code == 400) {
+        // Backward compatibility: some existing Appwrite schemas may not yet include `role`.
+        final legacyProfile = Map<String, dynamic>.from(profile)..remove('role');
+        try {
+          await _databases.createDocument(
+            databaseId: _config.databaseId,
+            collectionId: _config.usersCollectionId,
+            documentId: user.id,
+            data: legacyProfile,
+            permissions: [
+              Permission.read(Role.any()),
+              Permission.update(Role.user(user.id)),
+              Permission.delete(Role.user(user.id)),
+            ],
+          );
+        } on AppwriteException catch (legacyError) {
+          if (legacyError.code == 409) {
+            await _databases.updateDocument(
+              databaseId: _config.databaseId,
+              collectionId: _config.usersCollectionId,
+              documentId: user.id,
+              data: legacyProfile,
+            );
+          } else {
+            rethrow;
+          }
+        }
       } else {
         rethrow;
       }

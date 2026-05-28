@@ -9,7 +9,7 @@ class SplashPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
+    final authState = ref.watch(routerAuthStateProvider);
     final appUser = authState.valueOrNull;
 
     return Scaffold(
