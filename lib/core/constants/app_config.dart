@@ -1,5 +1,10 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_circle_app/core/constants/app_environment.dart';
+
+final appConfigProvider = Provider<AppConfig>((ref) {
+  throw UnimplementedError('appConfigProvider must be overridden in ProviderScope');
+});
 
 class AppConfig {
   const AppConfig({

@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_circle_app/app.dart';
 import 'package:skill_circle_app/core/constants/app_config.dart';
-import 'package:skill_circle_app/core/providers/app_config_provider.dart';
-import 'package:skill_circle_app/core/services/firebase_initializer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FirebaseInitializer.initialize();
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);

@@ -5,7 +5,6 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_webview_window
   file_selector_windows
-  firebase_core
   url_launcher_windows
   window_to_front
 )
