@@ -5,6 +5,7 @@ import 'package:skill_circle_app/core/appwrite.dart';
 import 'package:skill_circle_app/core/widgets/glass.dart';
 import 'package:skill_circle_app/models/user.dart';
 
+import 'package:skill_circle_app/core/theme.dart';
 final adminUsersProvider = FutureProvider.autoDispose<List<AppUser>>((ref) async {
   return ref.watch(appwriteServiceProvider).getAllUsers();
 });
@@ -23,7 +24,7 @@ class _AdminPageState extends ConsumerState<AdminPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Admin Control', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+        title: Text('Admin Control', style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
       ),
       body: AuroraBackground(
         child: Padding(
@@ -33,21 +34,21 @@ class _AdminPageState extends ConsumerState<AdminPage> {
             children: [
               Text(
                 'User Management',
-                style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: GoogleFonts.lexend(fontSize: 22, fontWeight: FontWeight.bold, color: context.textColor),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(
                 'Manage registrations and update system-wide roles.',
-                style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.60)),
+                style: GoogleFonts.inter(fontSize: 14, color: context.textColor.withValues(alpha: 0.60)),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Expanded(
                 child: usersAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () => Center(child: CircularProgressIndicator()),
                   error: (err, _) => Center(child: Text('Failed to load users: $err')),
                   data: (users) {
                     if (users.isEmpty) {
-                      return const Center(child: Text('No users registered yet.'));
+                      return Center(child: Text('No users registered yet.'));
                     }
 
                     return ListView.builder(
@@ -56,35 +57,35 @@ class _AdminPageState extends ConsumerState<AdminPage> {
                         final user = users[index];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
-                          child: GlassPanel(
+                          child: GradientPanel(
                             padding: const EdgeInsets.all(16),
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: const Color(0xFF8B5CF6),
-                                  child: Text(user.displayName[0].toUpperCase(), style: const TextStyle(color: Colors.white)),
+                                  backgroundColor: context.textColor,
+                                  child: Text(user.displayName[0].toUpperCase(), style: TextStyle(color: context.textColor)),
                                 ),
-                                const SizedBox(width: 14),
+                                SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(user.displayName, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                                      const SizedBox(height: 2),
-                                      Text(user.email, style: GoogleFonts.outfit(fontSize: 13, color: Colors.white.withValues(alpha: 0.50))),
+                                      Text(user.displayName, style: GoogleFonts.lexend(fontSize: 15, fontWeight: FontWeight.bold, color: context.textColor)),
+                                      SizedBox(height: 2),
+                                      Text(user.email, style: GoogleFonts.inter(fontSize: 13, color: context.textColor.withValues(alpha: 0.50))),
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12),
                                 DropdownButton<String>(
                                   value: user.role,
                                   dropdownColor: Colors.grey.shade900,
-                                  style: const TextStyle(color: Colors.white),
-                                  underline: const SizedBox(),
+                                  style: TextStyle(color: context.textColor),
+                                  underline: SizedBox(),
                                   items: ['student', 'mentor', 'admin'].map((role) {
                                     return DropdownMenuItem<String>(
                                       value: role,
-                                      child: Text(role.toUpperCase(), style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      child: Text(role.toUpperCase(), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
                                     );
                                   }).toList(),
                                   onChanged: (newRole) async {

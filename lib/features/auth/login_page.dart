@@ -1,3 +1,4 @@
+import 'package:skill_circle_app/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:skill_circle_app/core/appwrite.dart';
 import 'package:skill_circle_app/core/widgets/glass.dart';
 
+import 'package:skill_circle_app/core/theme.dart';
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -21,6 +23,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _isSignUp = false;
   String _selectedRole = 'student'; // 'student', 'mentor', 'admin'
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
 
   @override
@@ -92,45 +95,45 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(22),
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF8B5CF6), Color(0xFFC084FC)],
+                        colors: [AppColors.accentCyan, AppColors.accentCyan],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.35),
+                          color: context.textColor.withValues(alpha: 0.35),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
                       ],
                     ),
-                    child: const Center(
-                      child: Icon(Icons.bubble_chart_rounded, size: 40, color: Colors.white),
+                    child: Center(
+                      child: Icon(Icons.bubble_chart_rounded, size: 40, color: context.textColor),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text(
                   _isSignUp ? 'Create Account' : 'Welcome Back',
-                  style: GoogleFonts.sora(
+                  style: GoogleFonts.lexend(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: context.textColor,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   _isSignUp ? 'Join the community circle today' : 'Log in to connect with your circle',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                     fontSize: 15,
-                    color: Colors.white.withValues(alpha: 0.65),
+                    color: context.textColor.withValues(alpha: 0.65),
                   ),
                 ),
-                const SizedBox(height: 28),
+                SizedBox(height: 28),
 
                 // Main Form Card
-                GlassPanel(
+                GradientPanel(
                   padding: const EdgeInsets.all(24),
                   child: Form(
                     key: _formKey,
@@ -140,22 +143,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         if (_isSignUp) ...[
                           TextFormField(
                             controller: _nameController,
-                            style: const TextStyle(color: Colors.white),
+                            style: TextStyle(color: context.textColor),
                             decoration: const InputDecoration(
                               labelText: 'Full Name',
-                              prefixIcon: Icon(Icons.person_outline, color: Color(0xFF9A9AAE)),
+                              prefixIcon: Icon(Icons.person_outline, color: AppColors.darkTextSecondary),
                             ),
                             validator: (val) => val == null || val.trim().isEmpty ? 'Enter your name' : null,
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
                         ],
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: context.textColor),
                           decoration: const InputDecoration(
                             labelText: 'Email Address',
-                            prefixIcon: Icon(Icons.email_outlined, color: Color(0xFF9A9AAE)),
+                            prefixIcon: Icon(Icons.email_outlined, color: AppColors.darkTextSecondary),
                           ),
                           validator: (val) {
                             if (val == null || val.trim().isEmpty) return 'Enter your email';
@@ -163,39 +166,50 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordController,
-                          obscureText: true,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
+                          obscureText: _obscurePassword,
+                          style: TextStyle(color: context.textColor),
+                          decoration: InputDecoration(
                             labelText: 'Password',
-                            prefixIcon: Icon(Icons.lock_outline, color: Color(0xFF9A9AAE)),
+                            prefixIcon: const Icon(Icons.lock_outline, color: AppColors.darkTextSecondary),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                color: AppColors.darkTextSecondary,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
                           ),
                           validator: (val) => val == null || val.length < 6 ? 'Password must be at least 6 characters' : null,
                         ),
                         if (_isSignUp) ...[
-                          const SizedBox(height: 20),
+                          SizedBox(height: 20),
                           Text(
                             'Select Your Role',
-                            style: GoogleFonts.sora(
+                            style: GoogleFonts.lexend(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.90),
+                              color: context.textColor.withValues(alpha: 0.90),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Row(
                             children: [
                               Expanded(child: _buildRoleButton('student', 'Student', Icons.school_outlined)),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Expanded(child: _buildRoleButton('mentor', 'Mentor', Icons.psychology_outlined)),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Expanded(child: _buildRoleButton('admin', 'Admin', Icons.admin_panel_settings_outlined)),
                             ],
                           ),
                         ],
-                        const SizedBox(height: 24),
+                        SizedBox(height: 24),
 
                         if (_errorMessage != null) ...[
                           Container(
@@ -207,18 +221,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                             child: Text(
                               _errorMessage!,
-                              style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 14),
+                              style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 14),
                               textAlign: TextAlign.center,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
                         ],
 
                         ElevatedButton(
                           onPressed: _isLoading ? null : _submit,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF8B5CF6),
-                            foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -230,14 +242,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 )
                               : Text(
                                   _isSignUp ? 'Sign Up' : 'Sign In',
-                                  style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold),
                                 ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
                 // Footer switcher text
                 GestureDetector(
@@ -252,16 +264,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: Text(
                       _isSignUp ? 'Already have an account? Log In' : "Don't have an account? Sign Up",
                       key: ValueKey(_isSignUp),
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: const Color(0xFFC084FC),
+                        color: context.textColor,
                         decoration: TextDecoration.underline,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 48),
+                SizedBox(height: 48),
               ],
             ),
           ),
@@ -278,23 +290,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF8B5CF6) : Colors.white.withValues(alpha: 0.08),
+          color: isSelected ? AppColors.twitchPurple : context.textColor.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFFC084FC) : Colors.white.withValues(alpha: 0.12),
+            color: isSelected ? AppColors.twitchPurple : context.textColor.withValues(alpha: 0.12),
             width: 1.4,
           ),
         ),
         child: Column(
           children: [
-            Icon(icon, color: isSelected ? Colors.white : const Color(0xFFB8B8CB), size: 22),
-            const SizedBox(height: 4),
+            Icon(icon, color: isSelected ? Colors.white : context.textColor, size: 22),
+            SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Colors.white : const Color(0xFFB8B8CB),
+                color: isSelected ? Colors.white : context.textColor,
               ),
             ),
           ],

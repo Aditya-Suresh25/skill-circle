@@ -1,57 +1,57 @@
-import 'dart:ui';
+import 'package:skill_circle_app/core/theme.dart';
+import 'package:skill_circle_app/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 
-class GlassPanel extends StatelessWidget {
-  const GlassPanel({
+class GradientPanel extends StatelessWidget {
+  const GradientPanel({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.radius = 22.0,
-    this.blurSigma = 12.0,
     this.useAnimatedEntrance = false,
   });
 
   final Widget child;
   final EdgeInsets padding;
   final double radius;
-  final double blurSigma;
   final bool useAnimatedEntrance;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? const Color(0xFF8B5CF6) : const Color(0xFFA855F7);
+    final isDark = context.isDarkMode;
+    final accent = isDark ? AppColors.twitchPurple : AppColors.twitchPurpleLight;
 
-    final panel = ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-        child: Container(
-          width: double.infinity,
-          padding: padding,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            gradient: LinearGradient(
-              colors: isDark
-                  ? [Colors.white.withValues(alpha: 0.10), Colors.white.withValues(alpha: 0.045)]
-                  : [Colors.white.withValues(alpha: 0.82), Colors.white.withValues(alpha: 0.60)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.92),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: isDark ? 0.10 : 0.06),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: child,
+    final panel = Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        gradient: LinearGradient(
+          colors: isDark
+              ? [
+                  AppColors.darkSurface.withValues(alpha: 0.95),
+                  AppColors.darkSurface2.withValues(alpha: 0.85),
+                ]
+              : [
+                  AppColors.lightSurface.withValues(alpha: 0.95),
+                  AppColors.lightSurface2.withValues(alpha: 0.85),
+                ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: isDark ? 0.08 : 0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
+      child: child,
     );
 
     if (!useAnimatedEntrance) return panel;
@@ -100,7 +100,7 @@ class AuroraBackground extends StatelessWidget {
             top: -120,
             left: -80,
             child: _GlowBlob(
-              color: const Color(0xFF8B5CF6).withValues(alpha: isDark ? 0.18 : 0.12),
+              color: AppColors.twitchPurple.withValues(alpha: isDark ? 0.18 : 0.12),
               size: 320,
             ),
           ),
@@ -108,7 +108,7 @@ class AuroraBackground extends StatelessWidget {
             top: 120,
             right: -70,
             child: _GlowBlob(
-              color: const Color(0xFFC084FC).withValues(alpha: isDark ? 0.18 : 0.12),
+              color: AppColors.twitchPurpleLight.withValues(alpha: isDark ? 0.18 : 0.12),
               size: 280,
             ),
           ),
@@ -116,7 +116,7 @@ class AuroraBackground extends StatelessWidget {
             bottom: -120,
             left: 40,
             child: _GlowBlob(
-              color: const Color(0xFFA855F7).withValues(alpha: isDark ? 0.16 : 0.10),
+              color: AppColors.twitchPurpleLight.withValues(alpha: isDark ? 0.16 : 0.10),
               size: 320,
             ),
           ),
@@ -124,7 +124,7 @@ class AuroraBackground extends StatelessWidget {
             child: Opacity(
               opacity: isDark ? 0.06 : 0.03,
               child: CustomPaint(
-                painter: _NoisePainter(),
+                painter: _NoisePainter(context.textColor),
               ),
             ),
           ),
@@ -164,9 +164,13 @@ class _GlowBlob extends StatelessWidget {
 }
 
 class _NoisePainter extends CustomPainter {
+  const _NoisePainter(this.color);
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white;
+    final paint = Paint()..color = color;
     const gap = 24.0;
     for (var y = 0.0; y < size.height; y += gap) {
       for (var x = 0.0; x < size.width; x += gap) {

@@ -292,7 +292,6 @@ class AppwriteService {
       queries: [
         Query.equal('circle_id', circleId),
         Query.orderDesc('timestamp'),
-        Query.isNull('mentor_id'), // Filter out mentor tasks that reside in the posts collection
         Query.limit(100),
       ],
     );
@@ -331,6 +330,23 @@ class AppwriteService {
     );
   }
 
+  Future<void> updatePost(String postId, String content) async {
+    await _databases.updateDocument(
+      databaseId: _config.databaseId,
+      collectionId: _config.postsCollectionId,
+      documentId: postId,
+      data: {'content': content},
+    );
+  }
+
+  Future<void> deletePost(String postId) async {
+    await _databases.deleteDocument(
+      databaseId: _config.databaseId,
+      collectionId: _config.postsCollectionId,
+      documentId: postId,
+    );
+  }
+
   // --- Comments ---
   Future<List<Comment>> getComments(String postId) async {
     final res = await _databases.listDocuments(
@@ -338,7 +354,6 @@ class AppwriteService {
       collectionId: _config.commentsCollectionId,
       queries: [
         Query.equal('post_id', postId),
-        Query.isNull('task_id'), // Filter out task submissions
         Query.orderAsc('timestamp'),
         Query.limit(100),
       ],
@@ -439,10 +454,12 @@ class AppwriteService {
 
   // --- Mentor Tasks & Submissions ---
   Future<void> createTask(MentorTask task) async {
+    final docId = task.id.isEmpty ? ID.unique() : task.id;
+    
     await _databases.createDocument(
       databaseId: _config.databaseId,
-      collectionId: _config.postsCollectionId,
-      documentId: task.id.isEmpty ? ID.unique() : task.id,
+      collectionId: _config.tasksCollectionId,
+      documentId: docId,
       data: task.toMap(),
     );
   }
@@ -450,11 +467,10 @@ class AppwriteService {
   Future<List<MentorTask>> getTasks(String circleId) async {
     final res = await _databases.listDocuments(
       databaseId: _config.databaseId,
-      collectionId: _config.postsCollectionId,
+      collectionId: _config.tasksCollectionId,
       queries: [
         Query.equal('circle_id', circleId),
-        Query.isNotNull('mentor_id'), // Filter only tasks
-        Query.orderDesc('timestamp'),
+        Query.orderDesc('created_at'),
         Query.limit(100),
       ],
     );
@@ -464,7 +480,7 @@ class AppwriteService {
   Future<void> updateTask(MentorTask task) async {
     await _databases.updateDocument(
       databaseId: _config.databaseId,
-      collectionId: _config.postsCollectionId,
+      collectionId: _config.tasksCollectionId,
       documentId: task.id,
       data: task.toMap(),
     );
@@ -473,7 +489,7 @@ class AppwriteService {
   Future<void> deleteTask(String taskId) async {
     await _databases.deleteDocument(
       databaseId: _config.databaseId,
-      collectionId: _config.postsCollectionId,
+      collectionId: _config.tasksCollectionId,
       documentId: taskId,
     );
   }
@@ -481,7 +497,7 @@ class AppwriteService {
   Future<void> submitTask(TaskSubmission submission) async {
     await _databases.createDocument(
       databaseId: _config.databaseId,
-      collectionId: _config.commentsCollectionId,
+      collectionId: _config.taskSubmissionsCollectionId,
       documentId: submission.id.isEmpty ? ID.unique() : submission.id,
       data: submission.toMap(),
     );
@@ -490,10 +506,10 @@ class AppwriteService {
   Future<List<TaskSubmission>> getSubmissions(String taskId) async {
     final res = await _databases.listDocuments(
       databaseId: _config.databaseId,
-      collectionId: _config.commentsCollectionId,
+      collectionId: _config.taskSubmissionsCollectionId,
       queries: [
         Query.equal('task_id', taskId),
-        Query.orderDesc('timestamp'),
+        Query.orderDesc('submitted_at'),
         Query.limit(100),
       ],
     );
@@ -507,17 +523,38 @@ class AppwriteService {
     return submissions;
   }
 
-  Future<void> gradeSubmission(String submissionId, String grade, String feedback) async {
+  Future<void> gradeSubmission(String submissionId, String grade, String feedback, String userId, String taskId) async {
+    final doc = await _databases.getDocument(
+      databaseId: _config.databaseId,
+      collectionId: _config.taskSubmissionsCollectionId,
+      documentId: submissionId,
+    );
+    
+    final submission = TaskSubmission.fromMap(doc.$id, Map<String, dynamic>.from(doc.data));
+    final updatedSubmission = submission.copyWith(grade: grade, feedback: feedback, status: 'graded');
+
     await _databases.updateDocument(
       databaseId: _config.databaseId,
-      collectionId: _config.commentsCollectionId,
+      collectionId: _config.taskSubmissionsCollectionId,
       documentId: submissionId,
-      data: {
-        'grade': grade,
-        'feedback': feedback,
-        'status': 'graded',
-      },
+      data: updatedSubmission.toMap(),
     );
+
+    if (grade == 'Pass') {
+      final profile = await getCurrentProfile(userId);
+      if (profile != null) {
+        final taskSkillId = 'task_$taskId';
+        if (!profile.joinedSkills.contains(taskSkillId)) {
+          final updatedSkills = Set<String>.from(profile.joinedSkills)..add(taskSkillId);
+          await _databases.updateDocument(
+            databaseId: _config.databaseId,
+            collectionId: _config.usersCollectionId,
+            documentId: userId,
+            data: {'joinedSkills': updatedSkills.toList()},
+          );
+        }
+      }
+    }
   }
 
   // --- Storage ---

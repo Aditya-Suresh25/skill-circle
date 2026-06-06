@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'post.dart';
 
 class MentorTask {
@@ -42,32 +43,31 @@ class MentorTask {
   factory MentorTask.fromMap(String id, Map<String, dynamic> data) {
     return MentorTask(
       id: id,
-      circleId: data['circle_id'] as String? ?? data['circleId'] as String? ?? '',
-      mentorId: data['mentor_id'] as String? ?? data['mentorId'] as String? ?? '',
+      circleId: data['circle_id'] as String? ?? '',
+      mentorId: data['mentor_id'] as String? ?? '',
       title: data['title'] as String? ?? '',
       description: data['description'] as String? ?? '',
       deadline: DateTime.tryParse(data['deadline'] as String? ?? ''),
       difficulty: data['difficulty'] as String? ?? 'Beginner',
       category: data['category'] as String? ?? 'General',
-      estimatedMinutes: (data['estimated_minutes'] as num?)?.toInt() ?? (data['estimatedMinutes'] as num?)?.toInt() ?? 30,
-      points: (data['points'] as num?)?.toInt() ?? (data['xp_reward'] as num?)?.toInt() ?? 10,
+      estimatedMinutes: (data['estimated_minutes'] as num?)?.toInt() ?? 30,
+      points: (data['points'] as num?)?.toInt() ?? 10,
       status: data['status'] as String? ?? 'not_started',
-      assignmentScope: data['assignment_scope'] as String? ?? data['assignmentScope'] as String? ?? 'all_mentees',
-      assignedUserIds: List<String>.from(data['assigned_user_ids'] ?? data['assignedUserIds'] ?? const <String>[]),
-      assignedCircleIds: List<String>.from(data['assigned_circle_ids'] ?? data['assignedCircleIds'] ?? const <String>[]),
-      orderIndex: (data['order_index'] as num?)?.toInt() ?? (data['orderIndex'] as num?)?.toInt() ?? 0,
+      assignmentScope: data['assignment_scope'] as String? ?? 'all_mentees',
+      assignedUserIds: List<String>.from(data['assigned_user_ids'] ?? []),
+      assignedCircleIds: List<String>.from(data['assigned_circle_ids'] ?? []),
+      orderIndex: (data['order_index'] as num?)?.toInt() ?? 0,
       resources: Attachment.fromDynamicList(data['resources']),
-      createdAt: DateTime.tryParse(data['created_at'] as String? ?? data['createdAt'] as String? ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(data['created_at'] as String? ?? '') ?? DateTime.now(),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'postId': id, // map to postId field when reusing posts collection
       'circle_id': circleId,
       'mentor_id': mentorId,
       'title': title,
-      'post_content': description, // map to post_content in posts collection
+      'description': description,
       'deadline': deadline?.toUtc().toIso8601String(),
       'difficulty': difficulty,
       'category': category,
@@ -80,10 +80,43 @@ class MentorTask {
       'order_index': orderIndex,
       'resources': resources.map((r) => r.toEncodedString()).toList(growable: false),
       'created_at': createdAt.toUtc().toIso8601String(),
-      'timestamp': createdAt.toUtc().toIso8601String(), // map to timestamp in posts collection
-      'user_id': mentorId,
-      'username': 'Mentor',
     };
+  }
+
+  MentorTask copyWith({
+    String? title,
+    String? description,
+    DateTime? deadline,
+    String? difficulty,
+    String? category,
+    int? estimatedMinutes,
+    int? points,
+    String? status,
+    String? assignmentScope,
+    List<String>? assignedUserIds,
+    List<String>? assignedCircleIds,
+    int? orderIndex,
+    List<Attachment>? resources,
+  }) {
+    return MentorTask(
+      id: id,
+      circleId: circleId,
+      mentorId: mentorId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      deadline: deadline ?? this.deadline,
+      difficulty: difficulty ?? this.difficulty,
+      category: category ?? this.category,
+      estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
+      points: points ?? this.points,
+      status: status ?? this.status,
+      assignmentScope: assignmentScope ?? this.assignmentScope,
+      assignedUserIds: assignedUserIds ?? this.assignedUserIds,
+      assignedCircleIds: assignedCircleIds ?? this.assignedCircleIds,
+      orderIndex: orderIndex ?? this.orderIndex,
+      resources: resources ?? this.resources,
+      createdAt: createdAt,
+    );
   }
 }
 
@@ -115,12 +148,12 @@ class TaskSubmission {
   factory TaskSubmission.fromMap(String id, Map<String, dynamic> data) {
     return TaskSubmission(
       id: id,
-      taskId: data['task_id'] as String? ?? data['taskId'] as String? ?? '',
-      userId: data['user_id'] as String? ?? data['userId'] as String? ?? '',
-      userName: data['username'] as String? ?? data['userName'] as String?,
-      content: data['content'] as String? ?? data['comment_text'] as String?,
+      taskId: data['task_id'] as String? ?? '',
+      userId: data['user_id'] as String? ?? '',
+      userName: data['username'] as String?,
+      content: data['content'] as String?,
       attachments: Attachment.fromDynamicList(data['attachments']),
-      submittedAt: DateTime.tryParse(data['submitted_at'] as String? ?? data['submittedAt'] as String? ?? '') ?? DateTime.now(),
+      submittedAt: DateTime.tryParse(data['submitted_at'] as String? ?? '') ?? DateTime.now(),
       status: data['status'] as String? ?? 'pending',
       grade: data['grade'] as String?,
       feedback: data['feedback'] as String?,
@@ -129,23 +162,24 @@ class TaskSubmission {
 
   Map<String, dynamic> toMap() {
     return {
-      'commentId': id, // map to commentId when reusing comments collection
-      'post_id': taskId, // map to post_id when reusing comments collection
       'task_id': taskId,
       'user_id': userId,
       'username': userName ?? 'Learner',
-      'comment_text': content ?? 'Task Submission', // map to comment_text in comments collection
       'content': content,
       'attachments': attachments.map((a) => a.toEncodedString()).toList(growable: false),
       'submitted_at': submittedAt.toUtc().toIso8601String(),
-      'timestamp': submittedAt.toUtc().toIso8601String(), // map to timestamp in comments collection
       'status': status,
       if (grade != null) 'grade': grade,
       if (feedback != null) 'feedback': feedback,
     };
   }
 
-  TaskSubmission copyWith({String? userName}) {
+  TaskSubmission copyWith({
+    String? userName,
+    String? status,
+    String? grade,
+    String? feedback,
+  }) {
     return TaskSubmission(
       id: id,
       taskId: taskId,
@@ -154,9 +188,9 @@ class TaskSubmission {
       content: content,
       attachments: attachments,
       submittedAt: submittedAt,
-      status: status,
-      grade: grade,
-      feedback: feedback,
+      status: status ?? this.status,
+      grade: grade ?? this.grade,
+      feedback: feedback ?? this.feedback,
     );
   }
 }

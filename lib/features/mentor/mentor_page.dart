@@ -1,3 +1,4 @@
+import 'package:skill_circle_app/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,6 +6,7 @@ import 'package:skill_circle_app/core/appwrite.dart';
 import 'package:skill_circle_app/core/widgets/glass.dart';
 import 'package:skill_circle_app/models/task.dart';
 
+import 'package:skill_circle_app/core/theme.dart';
 final mentorTasksProvider = FutureProvider.autoDispose<List<MentorTask>>((ref) async {
   final service = ref.watch(appwriteServiceProvider);
   final circles = await service.getCircles();
@@ -43,19 +45,19 @@ class _MentorPageState extends ConsumerState<MentorPage> {
             children: [
               Text(
                 'Submissions for: ${task.title}',
-                style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold),
+                style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Expanded(
                 child: FutureBuilder<List<TaskSubmission>>(
                   future: ref.read(appwriteServiceProvider).getSubmissions(task.id),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return Center(child: CircularProgressIndicator());
                     }
                     final submissions = snapshot.data ?? [];
                     if (submissions.isEmpty) {
-                      return const Center(child: Text('No submissions yet.'));
+                      return Center(child: Text('No submissions yet.'));
                     }
 
                     return ListView.builder(
@@ -63,12 +65,12 @@ class _MentorPageState extends ConsumerState<MentorPage> {
                       itemBuilder: (context, index) {
                         final sub = submissions[index];
                         return Card(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: context.textColor.withValues(alpha: 0.05),
                           child: ListTile(
                             title: Text(sub.userName ?? 'Student'),
                             subtitle: Text('Status: ${sub.status.toUpperCase()} | Grade: ${sub.grade ?? 'None'}'),
                             trailing: IconButton(
-                              icon: const Icon(Icons.grade_rounded, color: Color(0xFFC084FC)),
+                              icon: Icon(Icons.grade_rounded, color: AppColors.accentCyan),
                               onPressed: () {
                                 Navigator.pop(context);
                                 _showGradingDialog(sub);
@@ -99,26 +101,57 @@ class _MentorPageState extends ConsumerState<MentorPage> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
-              title: Text('Grade Submission', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+              title: Text('Grade Submission', style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (sub.content?.isNotEmpty ?? false) ...[
+                    Text('Notes:', style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 13)),
+                    SizedBox(height: 4),
+                    Text(sub.content!),
+                    SizedBox(height: 12),
+                  ],
+                  if (sub.attachments.isNotEmpty) ...[
+                    Text('Attachment:', style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 13)),
+                    SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        sub.attachments.first.url,
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                  ],
+                  Text('Grade:', style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 13)),
+                  SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       ElevatedButton(
                         onPressed: () => setModalState(() => grade = 'Pass'),
-                        style: ElevatedButton.styleFrom(backgroundColor: grade == 'Pass' ? Colors.green : Colors.grey),
-                        child: const Text('Pass'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                          backgroundColor: grade == 'Pass' ? Colors.green : Colors.grey,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Pass'),
                       ),
                       ElevatedButton(
                         onPressed: () => setModalState(() => grade = 'Needs Work'),
-                        style: ElevatedButton.styleFrom(backgroundColor: grade == 'Needs Work' ? Colors.orange : Colors.grey),
-                        child: const Text('Needs Work'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                          backgroundColor: grade == 'Needs Work' ? Colors.orange : Colors.grey,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Needs Work'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   TextField(
                     controller: feedbackController,
                     decoration: const InputDecoration(labelText: 'Feedback notes'),
@@ -128,21 +161,21 @@ class _MentorPageState extends ConsumerState<MentorPage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: isSaving
                       ? null
                       : () async {
                           setModalState(() => isSaving = true);
-                          await ref.read(appwriteServiceProvider).gradeSubmission(sub.id, grade, feedbackController.text.trim());
+                          await ref.read(appwriteServiceProvider).gradeSubmission(sub.id, grade, feedbackController.text.trim(), sub.userId, sub.taskId);
                           if (context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Submission graded successfully!')));
                           }
                           setModalState(() => isSaving = false);
                         },
-                  child: const Text('Submit Grade'),
+                  child: Text('Submit Grade'),
                 ),
               ],
             );
@@ -158,7 +191,7 @@ class _MentorPageState extends ConsumerState<MentorPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Mentor Panel', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+        title: Text('Mentor Panel', style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
       ),
       body: AuroraBackground(
         child: Padding(
@@ -168,17 +201,17 @@ class _MentorPageState extends ConsumerState<MentorPage> {
             children: [
               Text(
                 'Mentorship Overview',
-                style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: GoogleFonts.lexend(fontSize: 22, fontWeight: FontWeight.bold, color: context.textColor),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(
                 'Track assigned tasks across all circles and view learner submissions.',
-                style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.60)),
+                style: GoogleFonts.inter(fontSize: 14, color: context.textColor.withValues(alpha: 0.60)),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Expanded(
                 child: tasksAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () => Center(child: CircularProgressIndicator()),
                   error: (err, _) => Center(child: Text('Failed to load tasks: $err')),
                   data: (tasks) {
                     if (tasks.isEmpty) {
@@ -186,11 +219,11 @@ class _MentorPageState extends ConsumerState<MentorPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.psychology_outlined, size: 64, color: Colors.white.withValues(alpha: 0.25)),
-                            const SizedBox(height: 12),
+                            Icon(Icons.psychology_outlined, size: 64, color: context.textColor.withValues(alpha: 0.25)),
+                            SizedBox(height: 12),
                             Text(
                               'No tasks created yet.',
-                              style: GoogleFonts.sora(color: Colors.white.withValues(alpha: 0.5)),
+                              style: GoogleFonts.lexend(color: context.textColor.withValues(alpha: 0.5)),
                             ),
                           ],
                         ),
@@ -203,7 +236,7 @@ class _MentorPageState extends ConsumerState<MentorPage> {
                         final task = tasks[index];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
-                          child: GlassPanel(
+                          child: GradientPanel(
                             padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,32 +247,32 @@ class _MentorPageState extends ConsumerState<MentorPage> {
                                     Expanded(
                                       child: Text(
                                         task.title,
-                                        style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                        style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold, color: context.textColor),
                                       ),
                                     ),
-                                    Icon(Icons.assignment_turned_in_outlined, color: const Color(0xFFC084FC).withValues(alpha: 0.70)),
+                                    Icon(Icons.assignment_turned_in_outlined, color: context.textColor.withValues(alpha: 0.70)),
                                   ],
                                 ),
-                                const SizedBox(height: 8),
+                                SizedBox(height: 8),
                                 Text(
                                   task.description,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.70)),
+                                  style: GoogleFonts.inter(fontSize: 14, color: context.textColor.withValues(alpha: 0.70)),
                                 ),
-                                const SizedBox(height: 16),
+                                SizedBox(height: 16),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     OutlinedButton(
                                       onPressed: () => _viewSubmissions(task),
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.white,
-                                        side: BorderSide(color: Colors.white.withValues(alpha: 0.20)),
+                                        foregroundColor: context.textColor,
+                                        side: BorderSide(color: context.textColor.withValues(alpha: 0.20)),
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                         minimumSize: Size.zero,
                                       ),
-                                      child: const Text('Check Submissions'),
+                                      child: Text('Check Submissions'),
                                     ),
                                   ],
                                 ),

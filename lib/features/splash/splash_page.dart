@@ -1,3 +1,4 @@
+import 'package:skill_circle_app/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:skill_circle_app/core/appwrite.dart';
 import 'package:skill_circle_app/core/widgets/glass.dart';
 
+import 'package:skill_circle_app/core/theme.dart';
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
@@ -85,60 +87,60 @@ class _SplashPageState extends ConsumerState<SplashPage> with SingleTickerProvid
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(32),
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF8B5CF6), Color(0xFFC084FC)],
+                      colors: [AppColors.accentCyan, AppColors.accentCyan],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.45),
+                        color: context.textColor.withValues(alpha: 0.45),
                         blurRadius: 32,
                         offset: const Offset(0, 12),
                       ),
                     ],
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Icon(
                       Icons.bubble_chart_rounded,
                       size: 64,
-                      color: Colors.white,
+                      color: context.textColor,
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: 32),
                 Text(
                   'SKILLCIRCLE',
-                  style: GoogleFonts.sora(
+                  style: GoogleFonts.lexend(
                     fontSize: 32,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 4,
-                    color: Colors.white,
+                    color: context.textColor,
                     shadows: [
                       Shadow(
-                        color: Colors.black.withValues(alpha: 0.25),
+                        color: context.textColor.withValues(alpha: 0.25),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   'Where knowledge meets collaboration',
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
-                    color: Colors.white.withValues(alpha: 0.70),
+                    color: context.textColor.withValues(alpha: 0.70),
                   ),
                 ),
-                const SizedBox(height: 48),
+                SizedBox(height: 48),
                 SizedBox(
                   width: 48,
                   height: 48,
                   child: CircularProgressIndicator(
                     strokeWidth: 3.5,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFC084FC)),
-                    backgroundColor: Colors.white.withValues(alpha: 0.15),
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentCyan),
+                    backgroundColor: context.textColor.withValues(alpha: 0.15),
                   ),
                 ),
               ],

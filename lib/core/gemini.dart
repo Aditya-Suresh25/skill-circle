@@ -10,23 +10,22 @@ final geminiServiceProvider = Provider<GeminiService>((ref) {
 class GeminiService {
   GeminiService(String apiKey)
       : _model = GenerativeModel(
-          model: 'gemini-1.5-flash',
+          model: 'gemini-2.5-flash',
           apiKey: apiKey,
           generationConfig: GenerationConfig(
             temperature: 0.7,
-            maxOutputTokens: 150,
+            maxOutputTokens: 1000,
           ),
           systemInstruction: Content.system('''
 You are Skill Circle AI Writer.
-Your purpose is to help users create concise, professional, engaging, and community-friendly content.
+Your purpose is to help users create professional, engaging, and community-friendly content.
 Rules:
 - Preserve user intent.
-- Avoid unnecessary fluff.
-- Keep responses concise.
+- Be highly articulate and complete your thoughts.
 - Sound human and natural.
-- Focus on clarity and readability.
-- Prefer short paragraphs or bullet points.
-- Maximum response length: 120 words.
+- Format with clear paragraphs or bullet points for readability.
+- Do not abruptly cut off sentences.
+- Output ONLY the requested content. Do NOT include conversational filler, introductory phrases (e.g., "Here is the text", "Here are some options"), or concluding remarks.
 '''),
         );
 

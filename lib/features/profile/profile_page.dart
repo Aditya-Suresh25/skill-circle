@@ -1,3 +1,4 @@
+import 'package:skill_circle_app/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -85,7 +86,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
+                    color: context.textColor.withValues(alpha: 0.15),
                     blurRadius: 20,
                   ),
                 ],
@@ -99,15 +100,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     children: [
                       Text(
                         'Edit Profile',
-                        style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.lexend(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
+                        icon: Icon(Icons.close_rounded),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                   TextField(
                     controller: nameController,
                     decoration: const InputDecoration(
@@ -115,7 +116,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   TextField(
                     controller: bioController,
                     maxLines: 3,
@@ -124,7 +125,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       prefixIcon: Icon(Icons.description_outlined),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: isSaving
                         ? null
@@ -154,12 +155,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             }
                           },
                     child: isSaving
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 24,
                             height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation(Colors.white)),
+                            child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation(context.textColor)),
                           )
-                        : const Text('Save Changes'),
+                        : Text('Save Changes'),
                   ),
                 ],
               ),
@@ -209,6 +210,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         icon: Icons.lightbulb_rounded,
         unlocked: user.displayName.isNotEmpty && user.displayName != 'User',
       ),
+      _Badge(
+        title: 'Task Achiever',
+        description: 'Successfully completed a skill task.',
+        icon: Icons.check_circle_outline_rounded,
+        unlocked: user.joinedSkills.any((s) => s.startsWith('task_')),
+      ),
     ];
 
     return Scaffold(
@@ -218,7 +225,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             SliverAppBar(
               title: Text(
                 'My Profile',
-                style: GoogleFonts.sora(fontWeight: FontWeight.bold),
+                style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
               ),
               pinned: true,
               floating: true,
@@ -230,7 +237,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   },
                   icon: Icon(
                     themeMode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                    color: Colors.white,
+                    color: context.textColor,
                   ),
                 ),
               ],
@@ -242,7 +249,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Profile Header Card
-                GlassPanel(
+                GradientPanel(
                   child: Column(
                     children: [
                       Stack(
@@ -251,14 +258,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFFC084FC), width: 3),
+                              border: Border.all(color: AppColors.twitchPurpleLight, width: 3),
                             ),
                             child: CircleAvatar(
                               radius: 54,
                               backgroundColor: Colors.grey.shade900,
                               backgroundImage: user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
                               child: user.photoUrl == null
-                                  ? const Icon(Icons.person_rounded, size: 54, color: Colors.white)
+                                  ? Icon(Icons.person_rounded, size: 54, color: context.textColor)
                                   : null,
                             ),
                           ),
@@ -270,104 +277,104 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFF8B5CF6),
+                                  color: AppColors.twitchPurple,
                                   shape: BoxShape.circle,
                                 ),
                                 child: _isUploadingImage
-                                    ? const SizedBox(
+                                    ? SizedBox(
                                         width: 16,
                                         height: 16,
-                                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)),
+                                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(context.textColor)),
                                       )
-                                    : const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.white),
+                                    : Icon(Icons.camera_alt_rounded, size: 16, color: context.textColor),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       Text(
                         user.displayName,
-                        style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: GoogleFonts.lexend(fontSize: 22, fontWeight: FontWeight.bold, color: context.textColor),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         user.email,
-                        style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.60)),
+                        style: GoogleFonts.inter(fontSize: 14, color: context.textColor.withValues(alpha: 0.60)),
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.20),
+                          color: AppColors.twitchPurple.withValues(alpha: 0.20),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFC084FC).withValues(alpha: 0.40)),
+                          border: Border.all(color: AppColors.twitchPurpleLight.withValues(alpha: 0.40)),
                         ),
                         child: Text(
                           user.role.toUpperCase(),
-                          style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFC084FC)),
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.twitchPurpleLight),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       if (user.bio != null && user.bio!.isNotEmpty) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
                             user.bio!,
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(fontSize: 15, color: Colors.white.withValues(alpha: 0.80)),
+                            style: GoogleFonts.inter(fontSize: 15, color: context.textColor.withValues(alpha: 0.80)),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                       ],
                       OutlinedButton.icon(
                         onPressed: () => _showEditProfileDialog(user),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: BorderSide(color: Colors.white.withValues(alpha: 0.20)),
+                          foregroundColor: context.textColor,
+                          side: BorderSide(color: context.textColor.withValues(alpha: 0.20)),
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         ),
-                        icon: const Icon(Icons.edit_rounded, size: 18),
-                        label: const Text('Edit Details'),
+                        icon: Icon(Icons.edit_rounded, size: 18),
+                        label: Text('Edit Details'),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
 
                 // Stats Section
                 Row(
                   children: [
                     Expanded(
-                      child: GlassPanel(
+                      child: GradientPanel(
                         child: Column(
                           children: [
                             Text(
                               user.joinedSkills.length.toString(),
-                              style: GoogleFonts.sora(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: GoogleFonts.lexend(fontSize: 28, fontWeight: FontWeight.bold, color: context.textColor),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               'Circles Joined',
-                              style: GoogleFonts.outfit(fontSize: 13, color: Colors.white.withValues(alpha: 0.50)),
+                              style: GoogleFonts.inter(fontSize: 13, color: context.textColor.withValues(alpha: 0.50)),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
-                      child: GlassPanel(
+                      child: GradientPanel(
                         child: Column(
                           children: [
                             Text(
                               badges.where((b) => b.unlocked).length.toString(),
-                              style: GoogleFonts.sora(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                              style: GoogleFonts.lexend(fontSize: 28, fontWeight: FontWeight.bold, color: context.textColor),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               'Badges Earned',
-                              style: GoogleFonts.outfit(fontSize: 13, color: Colors.white.withValues(alpha: 0.50)),
+                              style: GoogleFonts.inter(fontSize: 13, color: context.textColor.withValues(alpha: 0.50)),
                             ),
                           ],
                         ),
@@ -375,14 +382,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
 
                 // Badges Showcase
                 Text(
                   'My Badges',
-                  style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: GoogleFonts.lexend(fontSize: 18, fontWeight: FontWeight.bold, color: context.textColor),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -395,7 +402,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   itemCount: badges.length,
                   itemBuilder: (context, index) {
                     final badge = badges[index];
-                    return GlassPanel(
+                    return GradientPanel(
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -403,25 +410,25 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           Icon(
                             badge.icon,
                             size: 32,
-                            color: badge.unlocked ? const Color(0xFFC084FC) : Colors.white.withValues(alpha: 0.20),
+                            color: badge.unlocked ? AppColors.twitchPurpleLight : context.textColor.withValues(alpha: 0.20),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Text(
                             badge.title,
-                            style: GoogleFonts.sora(
+                            style: GoogleFonts.lexend(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: badge.unlocked ? Colors.white : Colors.white.withValues(alpha: 0.30),
+                              color: badge.unlocked ? context.textColor : context.textColor.withValues(alpha: 0.30),
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             badge.unlocked ? badge.description : 'Locked',
                             textAlign: TextAlign.center,
                             maxLines: 2,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                               fontSize: 11,
-                              color: badge.unlocked ? Colors.white.withValues(alpha: 0.60) : Colors.white.withValues(alpha: 0.20),
+                              color: badge.unlocked ? context.textColor.withValues(alpha: 0.60) : context.textColor.withValues(alpha: 0.20),
                             ),
                           ),
                         ],
@@ -429,7 +436,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     );
                   },
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
                 // Logout Button
                 ElevatedButton.icon(
@@ -445,10 +452,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     side: const BorderSide(color: Colors.redAccent, width: 1.2),
                     elevation: 0,
                   ),
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Sign Out'),
+                  icon: Icon(Icons.logout_rounded),
+                  label: Text('Sign Out'),
                 ),
-                const SizedBox(height: 48),
+                SizedBox(height: 48),
               ],
             ),
           ),

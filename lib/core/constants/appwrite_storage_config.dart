@@ -12,6 +12,8 @@ class AppwriteStorageConfig {
     required this.commentsCollectionId,
     required this.channelsCollectionId,
     required this.messagesCollectionId,
+    required this.tasksCollectionId,
+    required this.taskSubmissionsCollectionId,
   });
 
   final String endpoint;
@@ -24,6 +26,8 @@ class AppwriteStorageConfig {
   final String commentsCollectionId;
   final String channelsCollectionId;
   final String messagesCollectionId;
+  final String tasksCollectionId;
+  final String taskSubmissionsCollectionId;
 
   static AppwriteStorageConfig fromEnv() {
     return AppwriteStorageConfig(
@@ -37,6 +41,8 @@ class AppwriteStorageConfig {
       commentsCollectionId: _required('APPWRITE_COMMENTS_COLLECTION_ID'),
       channelsCollectionId: _required('APPWRITE_CHANNELS_COLLECTION_ID'),
       messagesCollectionId: _required('APPWRITE_MESSAGES_COLLECTION_ID'),
+      tasksCollectionId: _required('APPWRITE_TASKS_COLLECTION_ID'),
+      taskSubmissionsCollectionId: _required('APPWRITE_TASK_SUBMISSIONS_COLLECTION_ID'),
     );
   }
 

@@ -71,7 +71,7 @@ class _AiWriterPageState extends ConsumerState<AiWriterPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('AI Writer', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+        title: Text('AI Writer', style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
       ),
       body: AuroraBackground(
         child: SingleChildScrollView(
@@ -81,17 +81,17 @@ class _AiWriterPageState extends ConsumerState<AiWriterPage> {
             children: [
               Text(
                 'AI Writing Assistant',
-                style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                style: GoogleFonts.lexend(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               const SizedBox(height: 6),
               Text(
                 'Draft and refine your circle posts, channel messages, or bios using Gemini AI.',
-                style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.60)),
+                style: GoogleFonts.inter(fontSize: 14, color: Colors.white.withValues(alpha: 0.60)),
               ),
               const SizedBox(height: 24),
 
               // Input Box Card
-              GlassPanel(
+              GradientPanel(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -120,7 +120,7 @@ class _AiWriterPageState extends ConsumerState<AiWriterPage> {
                       items: modes.entries.map((entry) {
                         return DropdownMenuItem<String>(
                           value: entry.key,
-                          child: Text(entry.value, style: GoogleFonts.outfit(fontSize: 14, color: Colors.white)),
+                          child: Text(entry.value, style: GoogleFonts.inter(fontSize: 14, color: Colors.white)),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -133,7 +133,7 @@ class _AiWriterPageState extends ConsumerState<AiWriterPage> {
                     ElevatedButton.icon(
                       onPressed: _isLoading ? null : _transform,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8B5CF6),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       icon: _isLoading
@@ -143,7 +143,7 @@ class _AiWriterPageState extends ConsumerState<AiWriterPage> {
                               child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)),
                             )
                           : const Icon(Icons.auto_awesome_rounded),
-                      label: Text('Transform Draft', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+                      label: Text('Transform Draft', style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -155,16 +155,16 @@ class _AiWriterPageState extends ConsumerState<AiWriterPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.redAccent.withValues(alpha: 0.15),
+                    color: Theme.of(context).colorScheme.error.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.redAccent.withValues(alpha: 0.40)),
+                    border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.40)),
                   ),
-                  child: Text(_errorMessage!, style: GoogleFonts.outfit(color: Colors.redAccent)),
+                  child: Text(_errorMessage!, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error)),
                 ),
               ],
 
               if (_rewrittenText != null)
-                GlassPanel(
+                GradientPanel(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -174,11 +174,11 @@ class _AiWriterPageState extends ConsumerState<AiWriterPage> {
                         children: [
                           Text(
                             'Optimised Output',
-                            style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
                           IconButton(
                             onPressed: _copyToClipboard,
-                            icon: const Icon(Icons.copy_all_rounded, color: Color(0xFFC084FC)),
+                            icon: Icon(Icons.copy_all_rounded, color: Theme.of(context).colorScheme.secondary),
                             tooltip: 'Copy Output',
                           ),
                         ],
@@ -186,9 +186,9 @@ class _AiWriterPageState extends ConsumerState<AiWriterPage> {
                       const SizedBox(height: 12),
                       const Divider(),
                       const SizedBox(height: 12),
-                      Text(
+                      SelectableText(
                         _rewrittenText!,
-                        style: GoogleFonts.outfit(fontSize: 15, height: 1.5, color: Colors.white.withValues(alpha: 0.90)),
+                        style: GoogleFonts.inter(fontSize: 15, height: 1.5, color: Colors.white.withValues(alpha: 0.90)),
                       ),
                     ],
                   ),

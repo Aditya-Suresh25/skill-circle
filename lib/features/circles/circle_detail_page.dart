@@ -1,3 +1,5 @@
+import 'package:skill_circle_app/core/theme.dart';
+import 'package:skill_circle_app/core/constants/app_colors.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -42,62 +44,53 @@ class CircleDetailPage extends ConsumerStatefulWidget {
   ConsumerState<CircleDetailPage> createState() => _CircleDetailPageState();
 }
 
-class _CircleDetailPageState extends ConsumerState<CircleDetailPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _CircleDetailPageState extends ConsumerState<CircleDetailPage> {
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final circleAsync = ref.watch(circleProvider(widget.circleId));
+    final user = ref.watch(currentUserProvider);
+    final isMentor = user != null && (user.role == 'mentor' || user.role == 'admin');
 
-    return Scaffold(
-      appBar: AppBar(
-        title: circleAsync.when(
-          loading: () => const Text('Loading...'),
-          error: (_, __) => const Text('Error'),
-          data: (c) => Text(c.circleName, style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+    return DefaultTabController(
+      length: isMentor ? 4 : 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: circleAsync.when(
+            loading: () => const Text('Loading...'),
+            error: (_, __) => const Text('Error'),
+            data: (c) => Text(c.circleName, style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
+          ),
+          bottom: TabBar(
+            labelStyle: GoogleFonts.lexend(fontWeight: FontWeight.bold),
+            unselectedLabelStyle: GoogleFonts.lexend(fontWeight: FontWeight.normal),
+            indicatorColor: AppColors.twitchPurpleLight,
+            labelColor: AppColors.twitchPurpleLight,
+            unselectedLabelColor: context.textColor.withValues(alpha: 0.50),
+            tabs: [
+              const Tab(text: 'Feed'),
+              const Tab(text: 'Chat'),
+              const Tab(text: 'Tasks'),
+              if (isMentor) const Tab(text: 'Brainstorm'),
+            ],
+          ),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          labelStyle: GoogleFonts.sora(fontWeight: FontWeight.bold),
-          unselectedLabelStyle: GoogleFonts.sora(fontWeight: FontWeight.normal),
-          indicatorColor: const Color(0xFFC084FC),
-          labelColor: const Color(0xFFC084FC),
-          unselectedLabelColor: Colors.white.withValues(alpha: 0.50),
-          tabs: const [
-            Tab(text: 'Feed'),
-            Tab(text: 'Chat'),
-            Tab(text: 'Tasks'),
-            Tab(text: 'Brainstorm'),
-          ],
-        ),
-      ),
-      body: AuroraBackground(
-        child: circleAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Color(0xFFC084FC)))),
-          error: (err, _) => Center(child: Text('Failed to load circle details: $err', style: const TextStyle(color: Colors.white))),
-          data: (circle) {
-            return TabBarView(
-              controller: _tabController,
-              children: [
-                _FeedTab(circle: circle),
-                _ChatTab(circle: circle),
-                _TasksTab(circle: circle),
-                _AiSuggestionsTab(circle: circle),
-              ],
-            );
-          },
+        body: AuroraBackground(
+          child: circleAsync.when(
+            loading: () => Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.twitchPurpleLight))),
+            error: (err, _) => Center(child: Text('Failed to load circle details: $err', style: TextStyle(color: context.textColor))),
+            data: (circle) {
+              return TabBarView(
+                children: [
+                  _FeedTab(circle: circle),
+                  _ChatTab(circle: circle),
+                  _TasksTab(circle: circle),
+                  if (isMentor) _AiSuggestionsTab(circle: circle),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -183,9 +176,85 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
     );
   }
 
+  void _editPost(Post post) {
+    final ctrl = TextEditingController(text: post.content);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Post'),
+          content: TextField(
+            controller: ctrl,
+            maxLines: 4,
+            style: TextStyle(color: context.textColor),
+            decoration: InputDecoration(
+              hintText: 'Share something with the circle...',
+              filled: true,
+              fillColor: context.textColor.withValues(alpha: 0.04),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                final newContent = ctrl.text.trim();
+                if (newContent.isNotEmpty && newContent != post.content) {
+                  try {
+                    await ref.read(appwriteServiceProvider).updatePost(post.id, newContent);
+                    ref.invalidate(postsProvider(widget.circle.circleId));
+                    if (context.mounted) Navigator.pop(context);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update post: $e')));
+                    }
+                  }
+                } else {
+                  Navigator.pop(context);
+                }
+              },
+              child: Text('Save Changes'),
+            )
+          ],
+        );
+      }
+    );
+  }
+
+  void _deletePost(Post post) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete Post'),
+          content: Text('Are you sure you want to delete this post? This cannot be undone.', style: TextStyle(color: context.textColor.withValues(alpha: 0.8))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+              onPressed: () async {
+                try {
+                  await ref.read(appwriteServiceProvider).deletePost(post.id);
+                  ref.invalidate(postsProvider(widget.circle.circleId));
+                  if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete post: $e')));
+                  }
+                }
+              },
+              child: Text('Delete'),
+            )
+          ],
+        );
+      }
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final postsAsync = ref.watch(postsProvider(widget.circle.circleId));
+    final user = ref.watch(currentUserProvider);
 
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(postsProvider(widget.circle.circleId)),
@@ -193,66 +262,66 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
         padding: const EdgeInsets.all(16),
         children: [
           // Create Post box
-          GlassPanel(
+          GradientPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextField(
                   controller: _postController,
                   maxLines: 3,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.textColor),
                   decoration: InputDecoration(
                     hintText: 'Share something with the circle...',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.45)),
-                    fillColor: Colors.white.withValues(alpha: 0.04),
+                    hintStyle: TextStyle(color: context.textColor.withValues(alpha: 0.45)),
+                    fillColor: context.textColor.withValues(alpha: 0.04),
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
                   ),
                 ),
                 if (_pickedFileName != null) ...[
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Chip(
                     label: Text(_pickedFileName!),
                     onDeleted: () => setState(() => _pickedFileName = null),
                   ),
                 ],
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
                       onPressed: _pickFile,
-                      icon: const Icon(Icons.add_photo_alternate_rounded, color: Color(0xFFC084FC)),
+                      icon: Icon(Icons.add_photo_alternate_rounded, color: AppColors.twitchPurpleLight),
                     ),
                     ElevatedButton(
                       onPressed: _isPosting ? null : _createPost,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8B5CF6),
+                        backgroundColor: AppColors.twitchPurple,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         minimumSize: Size.zero,
                       ),
                       child: _isPosting
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
-                          : const Text('Post'),
+                          : Text('Post'),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Posts Feed
           postsAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Color(0xFFC084FC)))),
-            error: (err, _) => Center(child: Text('Error loading feed: $err', style: const TextStyle(color: Colors.white))),
+            loading: () => Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.twitchPurpleLight))),
+            error: (err, _) => Center(child: Text('Error loading feed: $err', style: TextStyle(color: context.textColor))),
             data: (posts) {
               if (posts.isEmpty) {
                 return Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Text('No posts yet. Be the first to share!', style: TextStyle(color: Colors.white.withValues(alpha: 0.50))),
+                    child: Text('No posts yet. Be the first to share!', style: TextStyle(color: context.textColor.withValues(alpha: 0.50))),
                   ),
                 );
               }
@@ -265,7 +334,7 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                   final post = posts[index];
                   return Container(
                     margin: const EdgeInsets.only(bottom: 14),
-                    child: GlassPanel(
+                    child: GradientPanel(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -274,29 +343,45 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                             children: [
                               CircleAvatar(
                                 radius: 18,
-                                backgroundColor: const Color(0xFF8B5CF6),
-                                child: Text(post.username.isNotEmpty ? post.username[0].toUpperCase() : 'U', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                backgroundColor: AppColors.twitchPurple,
+                                child: Text(post.username.isNotEmpty ? post.username[0].toUpperCase() : 'U', style: TextStyle(color: context.textColor, fontWeight: FontWeight.bold)),
                               ),
-                              const SizedBox(width: 10),
+                              SizedBox(width: 10),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(post.username, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                                    const SizedBox(height: 2),
+                                    Text(post.username, style: GoogleFonts.lexend(fontSize: 14, fontWeight: FontWeight.bold, color: context.textColor)),
+                                    SizedBox(height: 2),
                                     Text(
                                       '${post.timestamp.day}/${post.timestamp.month} at ${post.timestamp.hour}:${post.timestamp.minute.toString().padLeft(2, '0')}',
-                                      style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.40)),
+                                      style: TextStyle(fontSize: 11, color: context.textColor.withValues(alpha: 0.40)),
                                     ),
                                   ],
                                 ),
                               ),
+                              if (user?.id == post.userId)
+                                PopupMenuButton<String>(
+                                  icon: Icon(Icons.more_horiz_rounded, color: context.textColor.withValues(alpha: 0.6)),
+                                  color: AppColors.darkSurface,
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      _editPost(post);
+                                    } else if (value == 'delete') {
+                                      _deletePost(post);
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18, color: Colors.white), SizedBox(width: 8), Text('Edit', style: TextStyle(color: Colors.white))])),
+                                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.redAccent), SizedBox(width: 8), Text('Delete', style: TextStyle(color: Colors.redAccent))])),
+                                  ],
+                                ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          Text(post.content, style: GoogleFonts.outfit(fontSize: 15, color: Colors.white)),
+                          SizedBox(height: 12),
+                          Text(post.content, style: GoogleFonts.inter(fontSize: 15, color: context.textColor)),
                           if (post.attachments.isNotEmpty) ...[
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(16),
                               child: Image.network(
@@ -306,13 +391,13 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Container(
                                   height: 100,
-                                  color: Colors.white.withValues(alpha: 0.05),
-                                  child: const Center(child: Icon(Icons.broken_image_rounded, color: Colors.grey)),
+                                  color: context.textColor.withValues(alpha: 0.05),
+                                  child: Center(child: Icon(Icons.broken_image_rounded, color: Colors.grey)),
                                 ),
                               ),
                             ),
                           ],
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
                           Row(
                             children: [
                               InkWell(
@@ -324,33 +409,33 @@ class _FeedTabState extends ConsumerState<_FeedTab> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.05),
+                                    color: context.textColor.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.arrow_upward_rounded, size: 16, color: Color(0xFFC084FC)),
-                                      const SizedBox(width: 4),
-                                      Text('${post.upvotes}', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                                      Icon(Icons.arrow_upward_rounded, size: 16, color: AppColors.twitchPurpleLight),
+                                      SizedBox(width: 4),
+                                      Text('${post.upvotes}', style: TextStyle(color: context.textColor, fontSize: 13)),
                                     ],
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               InkWell(
                                 onTap: () => _showComments(post),
                                 borderRadius: BorderRadius.circular(20),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.05),
+                                    color: context.textColor.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     children: [
-                                      Icon(Icons.mode_comment_outlined, size: 15, color: Color(0xFFC084FC)),
-                                      SizedBox(width: 4),
-                                      Text('Comments', style: TextStyle(color: Colors.white, fontSize: 13)),
+                                      const Icon(Icons.mode_comment_outlined, size: 15, color: AppColors.twitchPurpleLight),
+                                      const SizedBox(width: 4),
+                                      Text('Comments', style: TextStyle(color: context.textColor, fontSize: 13)),
                                     ],
                                   ),
                                 ),
@@ -445,23 +530,23 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Comments', style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.bold)),
-              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+              Text('Comments', style: GoogleFonts.lexend(fontSize: 18, fontWeight: FontWeight.bold)),
+              IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close)),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           FutureBuilder<List<Comment>>(
             future: ref.read(appwriteServiceProvider).getComments(widget.post.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(height: 150, child: Center(child: CircularProgressIndicator()));
+                return SizedBox(height: 150, child: Center(child: CircularProgressIndicator()));
               }
               if (snapshot.hasError) {
                 return SizedBox(height: 100, child: Center(child: Text('Failed to load comments')));
               }
               final comments = snapshot.data ?? [];
               if (comments.isEmpty) {
-                return const SizedBox(height: 100, child: Center(child: Text('No comments yet.')));
+                return SizedBox(height: 100, child: Center(child: Text('No comments yet.')));
               }
 
               return ConstrainedBox(
@@ -481,14 +566,14 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                             radius: 14,
                             child: Text(comment.username[0].toUpperCase()),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(comment.username, style: GoogleFonts.sora(fontWeight: FontWeight.bold, fontSize: 13)),
-                                const SizedBox(height: 2),
-                                Text(comment.commentText, style: GoogleFonts.outfit(fontSize: 14)),
+                                Text(comment.username, style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 13)),
+                                SizedBox(height: 2),
+                                Text(comment.commentText, style: GoogleFonts.inter(fontSize: 14)),
                               ],
                             ),
                           ),
@@ -500,7 +585,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
               );
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -511,10 +596,10 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               IconButton.filled(
                 onPressed: _isSubmitting ? null : _submitComment,
-                icon: const Icon(Icons.send_rounded),
+                icon: Icon(Icons.send_rounded),
               ),
             ],
           ),
@@ -577,13 +662,17 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
     final service = ref.read(appwriteServiceProvider);
     try {
       final messages = await service.getMessages(channel.channelId);
-      setState(() {
-        _messages = messages;
-      });
-      _scrollToBottom();
+      if (mounted) {
+        setState(() {
+          _messages = messages;
+        });
+        _scrollToBottom();
+      }
     } catch (_) {}
 
-    setState(() => _isLoadingMessages = false);
+    if (mounted) {
+      setState(() => _isLoadingMessages = false);
+    }
 
     // Listen to real-time updates for messages
     _realtimeSubscription = service.watchMessages().listen((msg) async {
@@ -593,10 +682,12 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
         if (data['channelId'] == channel.channelId) {
           final message = ChatMessage.fromMap(data['\$id'] ?? '', data);
           final senderProfile = await service.getCurrentProfile(message.senderId);
-          setState(() {
-            _messages.add(message.copyWith(senderName: senderProfile?.displayName));
-          });
-          _scrollToBottom();
+          if (mounted) {
+            setState(() {
+              _messages.add(message.copyWith(senderName: senderProfile?.displayName));
+            });
+            _scrollToBottom();
+          }
         }
       }
     });
@@ -635,7 +726,7 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Create Channel', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+          title: Text('Create Channel', style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
           content: TextField(
             controller: _channelNameController,
             decoration: const InputDecoration(
@@ -646,7 +737,7 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -662,7 +753,7 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
                 ref.invalidate(channelsProvider(widget.circle.circleId));
                 _selectChannel(channel);
               },
-              child: const Text('Create'),
+              child: Text('Create'),
             ),
           ],
         );
@@ -681,16 +772,16 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
         Container(
           height: 50,
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          color: Colors.white.withValues(alpha: 0.02),
+          color: context.textColor.withValues(alpha: 0.02),
           child: Row(
             children: [
               Expanded(
                 child: channelsAsync.when(
-                  loading: () => const Center(child: LinearProgressIndicator()),
-                  error: (_, __) => const Text('Error'),
+                  loading: () => Center(child: LinearProgressIndicator()),
+                  error: (_, __) => Text('Error'),
                   data: (channels) {
                     if (channels.isEmpty) {
-                      return Text('No channels yet', style: TextStyle(color: Colors.white.withValues(alpha: 0.40)));
+                      return Text('No channels yet', style: TextStyle(color: context.textColor.withValues(alpha: 0.40)));
                     }
 
                     return ListView.builder(
@@ -707,17 +798,17 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 14),
                               decoration: BoxDecoration(
-                                color: isSel ? const Color(0xFF8B5CF6) : Colors.transparent,
-                                border: Border.all(color: isSel ? const Color(0xFFC084FC) : Colors.white.withValues(alpha: 0.12)),
+                                color: isSel ? AppColors.twitchPurple : Colors.transparent,
+                                border: Border.all(color: isSel ? AppColors.twitchPurpleLight : context.textColor.withValues(alpha: 0.12)),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Center(
                                 child: Text(
                                   '# ${ch.name}',
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.inter(
                                     fontSize: 13,
                                     fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                                    color: isSel ? Colors.white : Colors.white.withValues(alpha: 0.60),
+                                    color: isSel ? context.textColor : context.textColor.withValues(alpha: 0.60),
                                   ),
                                 ),
                               ),
@@ -732,7 +823,7 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
               if (user != null && (user.role == 'mentor' || user.role == 'admin'))
                 IconButton(
                   onPressed: _showCreateChannelDialog,
-                  icon: const Icon(Icons.add_box_rounded, color: Color(0xFFC084FC)),
+                  icon: Icon(Icons.add_box_rounded, color: AppColors.twitchPurpleLight),
                 ),
             ],
           ),
@@ -741,11 +832,11 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
         // Messages area
         Expanded(
           child: _selectedChannel == null
-              ? Center(child: Text('Please select or create a channel', style: TextStyle(color: Colors.white.withValues(alpha: 0.45))))
+              ? Center(child: Text('Please select or create a channel', style: TextStyle(color: context.textColor.withValues(alpha: 0.45))))
               : _isLoadingMessages
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: CircularProgressIndicator())
                   : _messages.isEmpty
-                      ? Center(child: Text('No messages here yet. Start the conversation!', style: TextStyle(color: Colors.white.withValues(alpha: 0.40))))
+                      ? Center(child: Text('No messages here yet. Start the conversation!', style: TextStyle(color: context.textColor.withValues(alpha: 0.40))))
                       : ListView.builder(
                           controller: _scrollController,
                           padding: const EdgeInsets.all(16),
@@ -760,7 +851,7 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
                                 margin: const EdgeInsets.symmetric(vertical: 4),
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: isMe ? const Color(0xFF8B5CF6).withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.08),
+                                  color: isMe ? AppColors.twitchPurple.withValues(alpha: 0.85) : context.textColor.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.only(
                                     topLeft: const Radius.circular(18),
                                     topRight: const Radius.circular(18),
@@ -768,7 +859,7 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
                                     bottomRight: isMe ? Radius.zero : const Radius.circular(18),
                                   ),
                                   border: Border.all(
-                                    color: isMe ? const Color(0xFFC084FC).withValues(alpha: 0.40) : Colors.white.withValues(alpha: 0.06),
+                                    color: isMe ? AppColors.twitchPurpleLight.withValues(alpha: 0.40) : context.textColor.withValues(alpha: 0.06),
                                   ),
                                 ),
                                 constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
@@ -778,12 +869,12 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
                                     if (!isMe)
                                       Text(
                                         msg.senderName ?? 'Member',
-                                        style: GoogleFonts.sora(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFC084FC)),
+                                        style: GoogleFonts.lexend(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.twitchPurpleLight),
                                       ),
-                                    const SizedBox(height: 2),
+                                    SizedBox(height: 2),
                                     Text(
                                       msg.text,
-                                      style: GoogleFonts.outfit(fontSize: 14, color: Colors.white),
+                                      style: GoogleFonts.inter(fontSize: 14, color: context.textColor),
                                     ),
                                   ],
                                 ),
@@ -798,26 +889,26 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.20),
+              color: context.textColor.withValues(alpha: 0.20),
             ),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _msgController,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: context.textColor),
                     decoration: InputDecoration(
                       hintText: 'Type your message...',
-                      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.40)),
-                      fillColor: Colors.white.withValues(alpha: 0.04),
+                      hintStyle: TextStyle(color: context.textColor.withValues(alpha: 0.40)),
+                      fillColor: context.textColor.withValues(alpha: 0.04),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 IconButton.filled(
                   onPressed: _sendMessage,
-                  icon: const Icon(Icons.send_rounded),
+                  icon: Icon(Icons.send_rounded),
                 ),
               ],
             ),
@@ -848,12 +939,20 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
     super.dispose();
   }
 
-  void _showCreateTaskDialog() {
+  void _showCreateTaskDialog([MentorTask? taskToEdit]) {
+    if (taskToEdit != null) {
+      _taskTitleController.text = taskToEdit.title;
+      _taskDescController.text = taskToEdit.description;
+    } else {
+      _taskTitleController.clear();
+      _taskDescController.clear();
+    }
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Assign Task', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+          title: Text(taskToEdit == null ? 'Assign Task' : 'Edit Task', style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -862,7 +961,7 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
                   controller: _taskTitleController,
                   decoration: const InputDecoration(labelText: 'Task Title'),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 TextField(
                   controller: _taskDescController,
                   maxLines: 4,
@@ -873,8 +972,12 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              onPressed: () {
+                _taskTitleController.clear();
+                _taskDescController.clear();
+                Navigator.pop(context);
+              },
+              child: Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: _isCreatingTask ? null : () async {
@@ -887,29 +990,72 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
 
                 setState(() => _isCreatingTask = true);
                 try {
-                  final task = MentorTask(
-                    id: '',
-                    circleId: widget.circle.circleId,
-                    mentorId: user.id,
-                    title: title,
-                    description: desc,
-                    createdAt: DateTime.now(),
-                  );
-                  await ref.read(appwriteServiceProvider).createTask(task);
+                  if (taskToEdit == null) {
+                    final task = MentorTask(
+                      id: '',
+                      circleId: widget.circle.circleId,
+                      mentorId: user.id,
+                      title: title,
+                      description: desc,
+                      createdAt: DateTime.now(),
+                    );
+                    await ref.read(appwriteServiceProvider).createTask(task);
+                  } else {
+                    final updatedTask = taskToEdit.copyWith(
+                      title: title,
+                      description: desc,
+                    );
+                    await ref.read(appwriteServiceProvider).updateTask(updatedTask);
+                  }
+                  
                   _taskTitleController.clear();
                   _taskDescController.clear();
                   if (context.mounted) {
                     Navigator.pop(context);
                   }
                   ref.invalidate(tasksProvider(widget.circle.circleId));
-                } catch (_) {}
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                  }
+                }
                 setState(() => _isCreatingTask = false);
               },
-              child: const Text('Assign'),
+              child: Text(taskToEdit == null ? 'Assign' : 'Update'),
             ),
           ],
         );
       },
+    );
+  }
+
+  void _deleteTask(MentorTask task) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete Task'),
+          content: Text('Are you sure you want to delete this task? This cannot be undone.', style: TextStyle(color: context.textColor.withValues(alpha: 0.8))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+              onPressed: () async {
+                try {
+                  await ref.read(appwriteServiceProvider).deleteTask(task.id);
+                  ref.invalidate(tasksProvider(widget.circle.circleId));
+                  if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete task: $e')));
+                  }
+                }
+              },
+              child: Text('Delete'),
+            )
+          ],
+        );
+      }
     );
   }
 
@@ -926,7 +1072,7 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
-              title: Text('Submit Task', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+              title: Text('Submit Task', style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -937,7 +1083,7 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
                       maxLines: 3,
                       decoration: const InputDecoration(labelText: 'Short submission notes'),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     ElevatedButton.icon(
                       onPressed: () async {
                         final picker = ImagePicker();
@@ -951,7 +1097,7 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
                           });
                         }
                       },
-                      icon: const Icon(Icons.upload_file_rounded),
+                      icon: Icon(Icons.upload_file_rounded),
                       label: Text(subName != null ? 'File selected: $subName' : 'Select Attachment'),
                     ),
                   ],
@@ -960,7 +1106,7 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: isSubmitting
@@ -996,8 +1142,8 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
                           setModalState(() => isSubmitting = false);
                         },
                   child: isSubmitting
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
-                      : const Text('Submit'),
+                      ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(context.textColor)))
+                      : Text('Submit'),
                 ),
               ],
             );
@@ -1018,26 +1164,57 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
-              title: Text('Grade Submission', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+              title: Text('Grade Submission', style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (sub.content?.isNotEmpty ?? false) ...[
+                    Text('Notes:', style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 13)),
+                    SizedBox(height: 4),
+                    Text(sub.content!),
+                    SizedBox(height: 12),
+                  ],
+                  if (sub.attachments.isNotEmpty) ...[
+                    Text('Attachment:', style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 13)),
+                    SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        sub.attachments.first.url,
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                  ],
+                  Text('Grade:', style: GoogleFonts.lexend(fontWeight: FontWeight.bold, fontSize: 13)),
+                  SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       ElevatedButton(
-                        onPressed: () => setModalState(() => grade = 'Pass'),
-                        style: ElevatedButton.styleFrom(backgroundColor: grade == 'Pass' ? Colors.green : Colors.grey),
-                        child: const Text('Pass'),
+                        onPressed: isSaving ? null : () => setModalState(() => grade = 'Pass'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                          backgroundColor: grade == 'Pass' ? Colors.green : Colors.grey,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Pass'),
                       ),
                       ElevatedButton(
-                        onPressed: () => setModalState(() => grade = 'Needs Work'),
-                        style: ElevatedButton.styleFrom(backgroundColor: grade == 'Needs Work' ? Colors.orange : Colors.grey),
-                        child: const Text('Needs Work'),
+                        onPressed: isSaving ? null : () => setModalState(() => grade = 'Needs Work'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                          backgroundColor: grade == 'Needs Work' ? Colors.orange : Colors.grey,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Needs Work'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   TextField(
                     controller: feedbackController,
                     decoration: const InputDecoration(labelText: 'Feedback notes'),
@@ -1047,21 +1224,21 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: isSaving
                       ? null
                       : () async {
                           setModalState(() => isSaving = true);
-                          await ref.read(appwriteServiceProvider).gradeSubmission(sub.id, grade, feedbackController.text.trim());
+                          await ref.read(appwriteServiceProvider).gradeSubmission(sub.id, grade, feedbackController.text.trim(), sub.userId, sub.taskId);
                           if (context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Submission graded!')));
                           }
                           setModalState(() => isSaving = false);
                         },
-                  child: const Text('Submit Grade'),
+                  child: Text('Submit Grade'),
                 ),
               ],
             );
@@ -1085,18 +1262,18 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Submissions for: ${task.title}', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
+              Text('Submissions for: ${task.title}', style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold)),
+              SizedBox(height: 16),
               Expanded(
                 child: FutureBuilder<List<TaskSubmission>>(
                   future: ref.read(appwriteServiceProvider).getSubmissions(task.id),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return Center(child: CircularProgressIndicator());
                     }
                     final submissions = snapshot.data ?? [];
                     if (submissions.isEmpty) {
-                      return const Center(child: Text('No submissions yet.'));
+                      return Center(child: Text('No submissions yet.'));
                     }
 
                     return ListView.builder(
@@ -1104,12 +1281,12 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
                       itemBuilder: (context, index) {
                         final sub = submissions[index];
                         return Card(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: context.textColor.withValues(alpha: 0.05),
                           child: ListTile(
                             title: Text(sub.userName ?? 'Student'),
                             subtitle: Text('Status: ${sub.status.toUpperCase()} | Grade: ${sub.grade ?? 'Unresolved'}'),
                             trailing: IconButton(
-                              icon: const Icon(Icons.grade_rounded, color: Color(0xFFC084FC)),
+                              icon: Icon(Icons.grade_rounded, color: AppColors.twitchPurpleLight),
                               onPressed: () {
                                 Navigator.pop(context);
                                 _showGradingDialog(sub);
@@ -1138,16 +1315,16 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
       floatingActionButton: (user != null && (user.role == 'mentor' || user.role == 'admin'))
           ? FloatingActionButton(
               onPressed: _showCreateTaskDialog,
-              backgroundColor: const Color(0xFF8B5CF6),
-              child: const Icon(Icons.add_rounded),
+              backgroundColor: AppColors.twitchPurple,
+              child: Icon(Icons.add_rounded),
             )
           : null,
       body: tasksAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Error loading tasks: $err')),
         data: (tasks) {
           if (tasks.isEmpty) {
-            return Center(child: Text('No tasks assigned yet.', style: TextStyle(color: Colors.white.withValues(alpha: 0.40))));
+            return Center(child: Text('No tasks assigned yet.', style: TextStyle(color: context.textColor.withValues(alpha: 0.40))));
           }
 
           return ListView.builder(
@@ -1167,31 +1344,66 @@ class _TasksTabState extends ConsumerState<_TasksTab> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(child: Text(task.title, style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold))),
+                          Expanded(child: Text(task.title, style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold))),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(color: const Color(0xFF8B5CF6).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
-                            child: Text('Task', style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFFC084FC), fontWeight: FontWeight.bold)),
+                            decoration: BoxDecoration(color: AppColors.twitchPurple.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+                            child: Text('Task', style: GoogleFonts.inter(fontSize: 11, color: AppColors.twitchPurpleLight, fontWeight: FontWeight.bold)),
                           ),
+                          if (user?.id == task.mentorId || user?.role == 'admin')
+                            PopupMenuButton<String>(
+                              icon: Icon(Icons.more_horiz_rounded, color: context.textColor.withValues(alpha: 0.6)),
+                              color: AppColors.darkSurface,
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  _showCreateTaskDialog(task);
+                                } else if (value == 'delete') {
+                                  _deleteTask(task);
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18, color: Colors.white), SizedBox(width: 8), Text('Edit', style: TextStyle(color: Colors.white))])),
+                                const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.redAccent), SizedBox(width: 8), Text('Delete', style: TextStyle(color: Colors.redAccent))])),
+                              ],
+                            ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(task.description, style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.70))),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 8),
+                      Text(task.description, style: GoogleFonts.inter(fontSize: 14, color: context.textColor.withValues(alpha: 0.70))),
+                      SizedBox(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           if (isMentor)
                             OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
                               onPressed: () => _viewSubmissions(task),
-                              icon: const Icon(Icons.people_outline),
-                              label: const Text('View Submissions'),
+                              icon: Icon(Icons.people_outline),
+                              label: Text('View Submissions'),
                             )
                           else
-                            ElevatedButton.icon(
-                              onPressed: () => _showSubmitTaskDialog(task),
-                              icon: const Icon(Icons.send_rounded),
-                              label: const Text('Submit Work'),
+                            FutureBuilder<List<TaskSubmission>>(
+                              future: ref.read(appwriteServiceProvider).getSubmissions(task.id),
+                              builder: (context, snapshot) {
+                                final mySub = snapshot.data?.where((s) => s.userId == user?.id).firstOrNull;
+                                if (mySub != null) {
+                                  return ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      minimumSize: const Size(0, 48),
+                                      backgroundColor: mySub.grade == 'Pass' ? Colors.green : (mySub.grade == 'Needs Work' ? Colors.orange : AppColors.accentCyan),
+                                    ),
+                                    onPressed: null, // Disabled because already submitted
+                                    icon: Icon(mySub.grade == 'Pass' ? Icons.check_circle_rounded : (mySub.grade == 'Needs Work' ? Icons.warning_rounded : Icons.pending_rounded), color: Colors.white),
+                                    label: Text(mySub.grade == 'Pass' ? 'Passed' : (mySub.grade == 'Needs Work' ? 'Needs Work' : 'Pending Review'), style: TextStyle(color: Colors.white)),
+                                  );
+                                }
+                                return ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(minimumSize: const Size(0, 48)),
+                                  onPressed: () => _showSubmitTaskDialog(task),
+                                  icon: Icon(Icons.send_rounded),
+                                  label: Text('Submit Work'),
+                                );
+                              },
                             ),
                         ],
                       ),
@@ -1248,18 +1460,18 @@ class _AiSuggestionsTabState extends State<_AiSuggestionsTab> {
             children: [
               Text(
                 'AI Brainstorm Hub',
-                style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                style: GoogleFonts.lexend(fontSize: 20, fontWeight: FontWeight.bold, color: context.textColor),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(
                 'Brainstorm collaborative projects and discussion icebreakers powered by Gemini AI.',
-                style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.60)),
+                style: GoogleFonts.inter(fontSize: 14, color: context.textColor.withValues(alpha: 0.60)),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: _isLoading ? null : () => _generateIdeas(ref),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6),
+                  backgroundColor: AppColors.twitchPurple,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 icon: _isLoading
@@ -1267,32 +1479,32 @@ class _AiSuggestionsTabState extends State<_AiSuggestionsTab> {
                     : const Icon(Icons.auto_awesome_rounded),
                 label: Text(
                   _isLoading ? 'Brainstorming...' : 'Generate Projects & Icebreakers',
-                  style: GoogleFonts.sora(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.lexend(fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               if (_suggestions != null)
-                GlassPanel(
+                GradientPanel(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.lightbulb_outline_rounded, color: Color(0xFFC084FC)),
-                          const SizedBox(width: 8),
+                          Icon(Icons.lightbulb_outline_rounded, color: AppColors.twitchPurpleLight),
+                          SizedBox(width: 8),
                           Text(
                             'Gemini Suggestions',
-                            style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold, color: context.textColor),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       const Divider(),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       Text(
                         _suggestions!,
-                        style: GoogleFonts.outfit(fontSize: 15, height: 1.5, color: Colors.white.withValues(alpha: 0.90)),
+                        style: GoogleFonts.inter(fontSize: 15, height: 1.5, color: context.textColor.withValues(alpha: 0.90)),
                       ),
                     ],
                   ),

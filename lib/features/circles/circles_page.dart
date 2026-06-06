@@ -1,3 +1,5 @@
+import 'package:skill_circle_app/core/theme.dart';
+import 'package:skill_circle_app/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,12 +37,15 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
     final user = ref.watch(currentUserProvider);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/create-circle'),
-        backgroundColor: const Color(0xFF8B5CF6),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: Text('Create Circle', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80.0),
+        child: FloatingActionButton.extended(
+          onPressed: () => context.push('/create-circle'),
+          backgroundColor: AppColors.twitchPurple,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.add_rounded),
+          label: Text('Create Circle', style: GoogleFonts.lexend(fontWeight: FontWeight.bold, color: Colors.white)),
+        ),
       ),
       body: AuroraBackground(
         child: SafeArea(
@@ -55,17 +60,17 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                   children: [
                     Text(
                       'Discover Circles',
-                      style: GoogleFonts.sora(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white),
+                      style: GoogleFonts.lexend(fontSize: 28, fontWeight: FontWeight.w800, color: context.textColor),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Text(
                       'Connect and grow with others in specialised circles',
-                      style: GoogleFonts.outfit(fontSize: 15, color: Colors.white.withValues(alpha: 0.65)),
+                      style: GoogleFonts.inter(fontSize: 15, color: context.textColor.withValues(alpha: 0.65)),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     TextField(
                       controller: _searchController,
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: context.textColor),
                       onChanged: (val) {
                         setState(() {
                           _searchQuery = val.toLowerCase().trim();
@@ -73,7 +78,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                       },
                       decoration: InputDecoration(
                         hintText: 'Search circles...',
-                        prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF9A9AAE)),
+                        prefixIcon: Icon(Icons.search_rounded, color: AppColors.darkTextSecondary),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
                                 onPressed: () {
@@ -82,7 +87,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                                     _searchQuery = '';
                                   });
                                 },
-                                icon: const Icon(Icons.clear_rounded, color: Color(0xFF9A9AAE)),
+                                icon: Icon(Icons.clear_rounded, color: AppColors.darkTextSecondary),
                               )
                             : null,
                       ),
@@ -90,11 +95,11 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Expanded(
                 child: circlesAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Color(0xFFC084FC)))),
-                  error: (err, _) => Center(child: Text('Error loading circles: $err', style: const TextStyle(color: Colors.white))),
+                  loading: () => Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.twitchPurpleLight))),
+                  error: (err, _) => Center(child: Text('Error loading circles: $err', style: TextStyle(color: context.textColor))),
                   data: (circles) {
                     final filtered = circles.where((c) {
                       return c.circleName.toLowerCase().contains(_searchQuery) ||
@@ -106,11 +111,11 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.bubble_chart_outlined, size: 64, color: Colors.white.withValues(alpha: 0.25)),
-                            const SizedBox(height: 12),
+                            Icon(Icons.bubble_chart_outlined, size: 64, color: context.textColor.withValues(alpha: 0.25)),
+                            SizedBox(height: 12),
                             Text(
                               _searchQuery.isEmpty ? 'No circles found' : 'No matches for "$_searchQuery"',
-                              style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white.withValues(alpha: 0.50)),
+                              style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold, color: context.textColor.withValues(alpha: 0.50)),
                             ),
                           ],
                         ),
@@ -126,7 +131,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
-                          child: GlassPanel(
+                          child: GradientPanel(
                             padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -139,33 +144,33 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                                       height: 54,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: const Color(0xFFC084FC).withValues(alpha: 0.30)),
+                                        border: Border.all(color: AppColors.twitchPurpleLight.withValues(alpha: 0.30)),
                                         image: circle.imageUrl != null
                                             ? DecorationImage(image: NetworkImage(circle.imageUrl!), fit: BoxFit.cover)
                                             : null,
-                                        color: Colors.white.withValues(alpha: 0.10),
+                                        color: context.textColor.withValues(alpha: 0.10),
                                       ),
                                       child: circle.imageUrl == null
-                                          ? const Icon(Icons.group_rounded, color: Color(0xFFC084FC), size: 28)
+                                          ? Icon(Icons.group_rounded, color: AppColors.twitchPurpleLight, size: 28)
                                           : null,
                                     ),
-                                    const SizedBox(width: 14),
+                                    SizedBox(width: 14),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             circle.circleName,
-                                            style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
+                                            style: GoogleFonts.lexend(fontSize: 17, fontWeight: FontWeight.bold, color: context.textColor),
                                           ),
-                                          const SizedBox(height: 4),
+                                          SizedBox(height: 4),
                                           Row(
                                             children: [
-                                              Icon(Icons.people_outline_rounded, size: 14, color: Colors.white.withValues(alpha: 0.50)),
-                                              const SizedBox(width: 4),
+                                              Icon(Icons.people_outline_rounded, size: 14, color: context.textColor.withValues(alpha: 0.50)),
+                                              SizedBox(width: 4),
                                               Text(
                                                 '${circle.memberCount} members',
-                                                style: GoogleFonts.outfit(fontSize: 12, color: Colors.white.withValues(alpha: 0.50)),
+                                                style: GoogleFonts.inter(fontSize: 12, color: context.textColor.withValues(alpha: 0.50)),
                                               ),
                                             ],
                                           ),
@@ -174,14 +179,14 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: 12),
                                 Text(
                                   circle.description,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.75)),
+                                  style: GoogleFonts.inter(fontSize: 14, color: context.textColor.withValues(alpha: 0.75)),
                                 ),
-                                const SizedBox(height: 16),
+                                SizedBox(height: 16),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
@@ -190,14 +195,14 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                                         context.push('/circle/${circle.circleId}');
                                       },
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.white,
-                                        side: BorderSide(color: Colors.white.withValues(alpha: 0.20)),
+                                        foregroundColor: context.textColor,
+                                        side: BorderSide(color: context.textColor.withValues(alpha: 0.20)),
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                         minimumSize: Size.zero,
                                       ),
-                                      child: const Text('View Circle'),
+                                      child: Text('View Circle'),
                                     ),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: 8),
                                     ElevatedButton(
                                       onPressed: () async {
                                         if (user == null) return;
@@ -212,7 +217,7 @@ class _CirclesPageState extends ConsumerState<CirclesPage> {
                                         ref.invalidate(circlesListProvider);
                                       },
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: isJoined ? Colors.redAccent.withValues(alpha: 0.20) : const Color(0xFF8B5CF6),
+                                        backgroundColor: isJoined ? Colors.redAccent.withValues(alpha: 0.20) : AppColors.twitchPurple,
                                         foregroundColor: isJoined ? Colors.redAccent : Colors.white,
                                         elevation: 0,
                                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

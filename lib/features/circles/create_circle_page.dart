@@ -1,3 +1,4 @@
+import 'package:skill_circle_app/core/constants/app_colors.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:skill_circle_app/core/appwrite.dart';
 import 'package:skill_circle_app/core/widgets/glass.dart';
 import 'package:skill_circle_app/features/circles/circles_page.dart';
 
+import 'package:skill_circle_app/core/theme.dart';
 class CreateCirclePage extends ConsumerStatefulWidget {
   const CreateCirclePage({super.key});
 
@@ -129,7 +131,7 @@ class _CreateCirclePageState extends ConsumerState<CreateCirclePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create Circle', style: GoogleFonts.sora(fontWeight: FontWeight.bold)),
+        title: Text('Create Circle', style: GoogleFonts.lexend(fontWeight: FontWeight.bold)),
       ),
       body: AuroraBackground(
         child: SingleChildScrollView(
@@ -145,27 +147,27 @@ class _CreateCirclePageState extends ConsumerState<CreateCirclePage> {
                   child: Container(
                     height: 150,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: context.textColor.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1.4),
+                      border: Border.all(color: context.textColor.withValues(alpha: 0.12), width: 1.4),
                       image: _bannerBytes != null ? DecorationImage(image: MemoryImage(_bannerBytes!), fit: BoxFit.cover) : null,
                     ),
                     child: _bannerBytes == null
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.add_photo_alternate_rounded, size: 36, color: Colors.white.withValues(alpha: 0.40)),
-                              const SizedBox(height: 8),
+                              Icon(Icons.add_photo_alternate_rounded, size: 36, color: context.textColor.withValues(alpha: 0.40)),
+                              SizedBox(height: 8),
                               Text(
                                 'Add Banner Image',
-                                style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.50)),
+                                style: GoogleFonts.inter(fontSize: 14, color: context.textColor.withValues(alpha: 0.50)),
                               ),
                             ],
                           )
                         : null,
                   ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
 
                 // Avatar Selector
                 Center(
@@ -175,14 +177,14 @@ class _CreateCirclePageState extends ConsumerState<CreateCirclePage> {
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFC084FC), width: 3),
+                          border: Border.all(color: context.textColor, width: 3),
                         ),
                         child: CircleAvatar(
                           radius: 50,
-                          backgroundColor: Colors.white.withValues(alpha: 0.08),
+                          backgroundColor: context.textColor.withValues(alpha: 0.08),
                           backgroundImage: _avatarBytes != null ? MemoryImage(_avatarBytes!) : null,
                           child: _avatarBytes == null
-                              ? const Icon(Icons.group_rounded, size: 48, color: Colors.white)
+                              ? Icon(Icons.group_rounded, size: 48, color: context.textColor)
                               : null,
                         ),
                       ),
@@ -194,51 +196,49 @@ class _CreateCirclePageState extends ConsumerState<CreateCirclePage> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: const BoxDecoration(
-                              color: Color(0xFF8B5CF6),
+                              color: AppColors.accentCyan,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.edit_rounded, size: 16, color: Colors.white),
+                            child: Icon(Icons.edit_rounded, size: 16, color: context.textColor),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 28),
+                SizedBox(height: 28),
 
                 // Form Fields Card
-                GlassPanel(
+                GradientPanel(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       TextFormField(
                         controller: _nameController,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: context.textColor),
                         decoration: const InputDecoration(
                           labelText: 'Circle Name',
-                          prefixIcon: Icon(Icons.title_rounded, color: Color(0xFF9A9AAE)),
+                          prefixIcon: Icon(Icons.title_rounded, color: AppColors.darkTextSecondary),
                         ),
                         validator: (val) => val == null || val.trim().isEmpty ? 'Enter circle name' : null,
                       ),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20),
                       TextFormField(
                         controller: _descController,
                         maxLines: 4,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: context.textColor),
                         decoration: const InputDecoration(
                           labelText: 'Description',
-                          prefixIcon: Icon(Icons.description_outlined, color: Color(0xFF9A9AAE)),
+                          prefixIcon: Icon(Icons.description_outlined, color: AppColors.darkTextSecondary),
                           alignLabelWithHint: true,
                         ),
                         validator: (val) => val == null || val.trim().isEmpty ? 'Enter circle description' : null,
                       ),
-                      const SizedBox(height: 28),
+                      SizedBox(height: 28),
                       ElevatedButton(
                         onPressed: _isSaving ? null : _submit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF8B5CF6),
-                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                         child: _isSaving
@@ -247,7 +247,7 @@ class _CreateCirclePageState extends ConsumerState<CreateCirclePage> {
                                 height: 24,
                                 child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation(Colors.white)),
                               )
-                            : Text('Create Circle', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold)),
+                            : Text('Create Circle', style: GoogleFonts.lexend(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
